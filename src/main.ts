@@ -72,11 +72,13 @@ class CardTargeting {
 	index: number;
 	targets: number[]; //ids of the enemies
 	targets_left: number;
+	total_targets: number;
 	constructor(card: Card, index: number, targets: number) {
 		this.card = card;
 		this.index = index;
 		this.targets = [];
-		this.targets_left = targets
+		this.targets_left = targets;
+		this.total_targets = targets;
 	}
 }
 	
@@ -133,7 +135,18 @@ class Enemy {
 
 
 
+function shuffle(array) {
+	  let currentIndex = array.length;
 
+	  while (currentIndex != 0) {
+
+		  let randomIndex = Math.floor(Math.random() * currentIndex);
+		  currentIndex--;
+
+		  [array[currentIndex], array[randomIndex]] = [
+			  array[randomIndex], array[currentIndex]];
+	  }
+}
 
 class World {
 	player_hand: Card[];
@@ -152,6 +165,7 @@ class World {
 	in_between_phase: boolean;
 	s_e_d: Map<number, Enemy> | null;
 	ibt_damage_dealt: boolean;
+	
 	constructor(){
 		this.player_hand = [];
 		this.card_on_mouse = null;
@@ -180,6 +194,9 @@ class World {
 		this.in_between_phase = true;
 		this.s_e_d = new Map(JSON.parse(JSON.stringify(Array.from(this.enemies))));
 		this.ibt_damage_dealt = false;
+	}
+	shuffle() {
+		shuffle(this.player_deck);
 	}
 	update(){
 		if (this.in_between_phase) {
@@ -349,6 +366,19 @@ class Camera {
 				p5.line(e.x+e.h+10, e.y+e.h+10, e.x +e.h+10, e.y + e.h);
 
 			}
+			for (let target of world.card_targeting.targets) {
+				let e = world.enemies.get(target);
+				p5.stroke(255,0,0);
+				p5.strokeWeight(5);
+				p5.line(e.x-10, e.y-10, e.x-10, e.y);
+				p5.line(e.x-10, e.y-10, e.x, e.y-10);
+				p5.line(e.x+e.w+10, e.y-10, e.x+e.w, e.y-10);
+				p5.line(e.x+e.w+10, e.y-10, e.x+e.w+10, e.y);
+				p5.line(e.x-10, e.y+e.h+10, e.x, e.y + e.h + 10);
+				p5.line(e.x-10, e.y+e.h+10, e.x - 10, e.y + e.h);
+				p5.line(e.x+e.h+10, e.y+e.h+10, e.x +e.h, e.y + e.h+10);
+				p5.line(e.x+e.h+10, e.y+e.h+10, e.x +e.h+10, e.y + e.h);
+			}
 
 		}
 
@@ -371,6 +401,23 @@ class Camera {
 		p5.text("End Turn", 950, CARD_Y - 50);
 
 
+		if (world.card_targeting != null && world.card_targeting.total_targets > 1) {
+			p5.stroke(20);
+			p5.strokeWeight(3);
+			p5.fill(200,150,0);
+			if (p5.mouseX > 265 && p5.mouseX < 430 && p5.mouseY > CARD_Y - 80 && p5.mouseY < CARD_Y - 30) {
+				p5.fill(240,200,200);
+			}
+			p5.rect(265,CARD_Y - 80,170,50, 14);
+			p5.textAlign(p5.CENTER);
+			p5.noStroke();
+			p5.textSize(20);
+			p5.textStyle(p5.BOLD);
+			p5.fill(90, 150);
+			p5.text("Confirm Targets", 353, CARD_Y - 47);
+			p5.fill(255);
+			p5.text("Confirm Targets", 350, CARD_Y - 50);
+		}
 
 		if (world.cant_afford_text >= 0) {
 			p5.stroke(180,50,50, world.cant_afford_text/20 * 255);
@@ -439,10 +486,40 @@ const card_1 = new CardDef("card 1", 1, "deal 1 damage to target enemy", new Car
 		world.enemies.get(card.targets[0]).hp -= 1;
 		world.cur_energy -= card.card.energy_cost;
 	}
+));
+const card_2 = new CardDef("card 2", 3, "deal 2 damage to up to 3 target enemies", new CardActions(
+	(world: World, card: CardOnMouse) => {
+		world.card_targeting = new CardTargeting(card.card, card.index, 3); 
+	},
+	(world: World, card: CardTargeting) => {
+		for (let target of card.targets) {
+			world.enemies.get(target).hp -= 2;
+		}
+		world.cur_energy -= card.card.energy_cost;
+	}
+))
+const card_3 = new CardDef("card 3", 4, "deal 3 damage to up to 2 target enemies, draw a card", new CardActions(
+	(world: World, card: CardOnMouse) => {
+		world.card_targeting = new CardTargeting(card.card, card.index, 2); 
+	},
+	(world: World, card: CardTargeting) => {
+		for (let target of card.targets) {
+			world.enemies.get(target).hp -= 3;
+		}
+		world.draw_card();
+		world.cur_energy -= card.card.energy_cost;
+	}
 ))
 for (let i = 0; i < 30; i++) {
 	world.add_card_to_deck(card_1);
 }
+for (let i = 0; i < 12; i++) {
+	world.add_card_to_deck(card_2);
+}
+for (let i = 0; i < 8; i++) {
+	world.add_card_to_deck(card_3);
+}
+world.shuffle();
 world.draw_card();
 world.draw_card();
 world.draw_card();
@@ -515,8 +592,13 @@ const sketch = (p5: P5) => {
 			}
 		}
 		if (world.card_targeting != null && world.cur_hovered_enemy == null) {
-			world.player_hand.splice(world.card_targeting.index, 0, world.card_targeting.card);
-			world.card_targeting = null;
+			if (p5.mouseX > 265 && p5.mouseX < 430 && p5.mouseY > CARD_Y - 80 && p5.mouseY < CARD_Y - 30 && world.card_targeting.total_targets >= 1) {
+				world.card_targeting.card.actions.onTarget(world, world.card_targeting);
+				world.card_targeting = null;
+			}else {
+				world.player_hand.splice(world.card_targeting.index, 0, world.card_targeting.card);
+				world.card_targeting = null;
+			}
 		}
 		if (p5.mouseX > 900 && p5.mouseX < 1000 && p5.mouseY > CARD_Y - 80 && p5.mouseY < CARD_Y - 30 && world.card_targeting == null) {
 			world.next_turn();
