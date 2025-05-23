@@ -1083,7 +1083,7 @@ const card_13 = new CardDef("Leyline", 5, (_) => { return "For the rest of the l
 }, (_w, _c) => { }, (world, _card) => {
     world.draw_card();
     return true;
-}), 6);
+}));
 // 6
 let cur_id = 1;
 let cardimg;
