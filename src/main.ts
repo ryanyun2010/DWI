@@ -1,8 +1,46 @@
 import P5 from 'p5';
-console.log("DDDD");
 const CARD_WIDTH: number = 124.8;
 const CARD_HEIGHT: number = 169;
 const CARD_Y: number = 600;
+
+
+const LEVELS = [
+[
+ [[5,5]],
+ [],
+ [[8,3]],
+ [[3,3]],
+ [],
+ [[4,4]],
+ [],
+ [[5,10]],
+ [[6,4]]
+],
+[
+ [[6,5]],
+ [],
+ [[5,6]],
+ [[4,4]],
+ [],
+ [[6,4]],
+ [[3,15]],
+ [[4,6], [5,4]],
+ [[8,2], [12,6]]
+],
+[
+ [[4,5], [4,5]],
+ [],
+ [[5,5], [5,5]],
+ [[4,4]],
+ [],
+ [[6,6], [6,6]],
+ [[15,3]],
+ [],
+ [[5,5], [12,6]]
+],
+]
+
+
 
 
 class CardDef {
@@ -10,11 +48,13 @@ class CardDef {
 	energy_cost: number;
 	description: string;
 	actions: CardActions;
-	constructor(name: string, energy_cost: number, description: string, actions: CardActions){
+	t_size: number;
+	constructor(name: string, energy_cost: number, description: string, actions: CardActions, t_size?: number){
 		this.name = name;
 		this.energy_cost = energy_cost;
 		this.description = description;
 		this.actions = actions;
+		this.t_size = t_size || 9;
 	}
 }
 
@@ -24,11 +64,16 @@ class Card {
 	energy_cost: number;
 	description: string;
 	actions: CardActions;
-	constructor(name: string, energy_cost: number, description: string, actions: CardActions){
+	t_size: number;
+	card_image: P5.Image;
+	constructor(name: string, energy_cost: number, description: string, actions: CardActions, t_size?: number, card_image?: P5.Image){
 		this.name = name;
 		this.energy_cost = energy_cost;
 		this.description = description;
 		this.actions = actions;
+		this.t_size = t_size || 9;
+		this.card_image = card_image;
+
 	}
 	render(p5: P5, x: number, y: number, factor: number) {
 		p5.fill(25);
@@ -46,39 +91,66 @@ class Card {
 		p5.strokeWeight(2);
 		p5.stroke("black");
 		p5.textAlign(p5.CENTER);
+		p5.image(li, rx + factor * 20.4, ry + factor * 26, w * 2/3, h * 7/20);
+		p5.image(ct, rx - factor * 6, ry + factor * 9.5, w * 1.1, h * 9/40);
 		p5.text(this.name, rx + factor*62, ry+factor*25);
 		p5.noStroke();
 		p5.textSize(factor*13);
 		p5.textStyle(p5.BOLD);
 		p5.text(this.energy_cost, rx + factor*114, ry+factor*11.5);
-
 		p5.textStyle(p5.NORMAL);
-		p5.textSize(factor * 9);
-		p5.text(this.description, rx + factor*19, ry+factor*110, factor * 86.8);
+		p5.textSize(factor * this.t_size);
+		p5.text(this.description, rx + factor*19, ry+factor*100, factor * 86.8);
+
+	}
+}
+
+class CardPerm {
+	card: Card;
+	casts: number;
+	turns: number;
+	constructor(card: Card) {
+		this.card = card;
+		this.casts = 0;
+		this.turns = 0;
 	}
 }
 
 class CardActions {
 	onCast: (world: World, card: CardOnMouse) => void;
 	onTarget: (world: World, card: CardTargeting) => void;
-	constructor(onCast: (world: World, card: CardOnMouse) => void, onTarget: (world: World, card: CardTargeting) => void) {
+	EOT: (world: World, card: CardPerm) => boolean;
+	afterCast: (world: World, card: CardPerm) => boolean; // return true if this should stay around, return false if it should not
+	eot_trigger: boolean;
+	cast_trigger: boolean;
+	constructor(onCast: (world: World, card: CardOnMouse) => void, onTarget?: (world: World, card: CardTargeting) => void, EOT?: (world: World, card: CardPerm) => boolean, afterCast?: (world: World, card: CardPerm) => boolean) {
 		this.onCast = onCast;
-		this.onTarget = onTarget;
+		this.onTarget = (onTarget || ((_world: World, _card: CardTargeting) => {}));
+		this.EOT = (EOT || ((_world: World, _card: CardPerm) => {return false}));
+		this.afterCast = (afterCast || ((_world: World, _card: CardPerm) => {return false}));
+		this.eot_trigger = EOT != null;
+		this.cast_trigger = afterCast != null;
 	}
 }
 
 class CardTargeting {
 	card: Card;
 	index: number;
-	targets: number[]; //ids of the enemies
+	targets_c: number[]; //ids of the enemies
+	targets_e: number[]; //ids of the enemies
 	targets_left: number;
 	total_targets: number;
-	constructor(card: Card, index: number, targets: number) {
+	targets_enemies: boolean;
+	targets_cards: boolean;
+	constructor(card: Card, index: number, targets: number, targets_enemies: boolean, targets_cards: boolean) {
 		this.card = card;
 		this.index = index;
-		this.targets = [];
+		this.targets_c = [];
+		this.targets_e = [];
 		this.targets_left = targets;
 		this.total_targets = targets;
+		this.targets_enemies = targets_enemies;
+		this.targets_cards = targets_cards;
 	}
 }
 	
@@ -129,13 +201,19 @@ class Enemy {
 		p5.textStyle(p5.BOLD);
 		p5.textSize(30);
 		p5.text(this.damage, this.x + this.w/2, this.y + this.h/2 + 10);
+		p5.textStyle(p5.BOLD);
+		p5.fill(0);
+		p5.textSize(16);
+		p5.textAlign(p5.LEFT);
+		p5.text(this.hp + "/" + this.max_hp, this.x + this.w, this.y - this.h * 3/5 - 5);
+		p5.textAlign(p5.CENTER);
 
 	}
 }
 
 
 
-function shuffle(array) {
+function shuffle(array: any[]) {
 	  let currentIndex = array.length;
 
 	  while (currentIndex != 0) {
@@ -148,23 +226,97 @@ function shuffle(array) {
 	  }
 }
 
+
+function selection(world: World, num: number): Card[] {
+	let cards = [];
+	for (let i = 0; i < num; i++) {
+		cards.push(select(world));
+	}
+	return cards;
+
+}
+
+function select(world: World): Card {
+	let r = Math.random();
+	if (r < 0.2) {
+		return world.make_card(card_1);
+	} else if (r < 0.33) {
+		return world.make_card(card_2);
+	} else if (r < 0.47) {
+		return world.make_card(card_3);
+	} else if (r < 0.56) {
+		return world.make_card(card_4);
+	} else if (r < 0.70) {
+		return world.make_card(card_5);
+	} else if (r < 0.77) {
+		return world.make_card(card_6);
+	} else if (r < 0.86){
+		return world.make_card(card_7);
+	} else {
+		return world.make_card(card_8);
+	}
+}
+
+
+enum State {
+	Playing,
+	ShowingDeck,
+	AddingCards,
+	EndPhase,
+	InBetweenPhase,
+	Targeting,
+	CardOnMouse,
+	GameOver,
+	Start
+}
+
+
 class World {
 	player_hand: Card[];
 	player_deck: Card[];
 	draw_pos: number;
-	card_on_mouse: CardOnMouse | null;
-	cur_hovered_card: number | null;
+
+	enemies: Map<number,Enemy>;
+	perm_cards: CardPerm[];
+
 	maxhp: number;
 	hp: number;
+
 	cur_energy: number;
 	max_energy: number;
-	enemies: Map<number,Enemy>;
-	card_targeting: CardTargeting | null;
-	cur_hovered_enemy: number | null;
+
+	cur_hovered_card: number | null;
+
 	cant_afford_text: number;
-	in_between_phase: boolean;
+
+	turn: number;
+	level: number;
+
+	/* CARD ON MOUSE */
+	card_on_mouse: CardOnMouse | null;
+
+	/* TARGETING */
+	cur_t_hovered_card: number | null;
+	cur_hovered_enemy: number | null;
+	card_targeting: CardTargeting | null;
+
+	/* IN BETWEEN PHASE */
 	s_e_d: Map<number, Enemy> | null;
 	ibt_damage_dealt: boolean;
+
+	/* END PHASE */
+	cur_card_trigger_eot: number;
+	triggering_card: CardPerm | null;
+	t_time: number;
+
+	/* ADDING CARDS */	
+	cards_being_shown: Card[];
+	clicked_added_card: number | null;
+	card_adds_left: number;
+	total_card_adds: number;
+
+	state: State;
+
 	
 	constructor(){
 		this.player_hand = [];
@@ -177,35 +329,143 @@ class World {
 		this.player_deck = [];
 		this.draw_pos = 0;
 		this.cant_afford_text = -1;
-		this.in_between_phase = false;
+		this.cur_card_trigger_eot = 0;
 		this.s_e_d = null;
 		this.ibt_damage_dealt = false;
+		this.triggering_card = null;
+		this.cur_t_hovered_card = null;
+		this.t_time = -1;
+		this.perm_cards = [];
+		this.turn = 0;
+		this.clicked_added_card = null;
+		this.level = 0;
+		this.state = State.Start;
+		this.card_adds_left = -1;
+		this.total_card_adds = 0;
 	}
 	add_card_to_deck(card_def: CardDef) {
-		this.player_deck.push(new Card(card_def.name, card_def.energy_cost, card_def.description, card_def.actions));
+		this.player_deck.push(new Card(card_def.name, card_def.energy_cost, card_def.description, card_def.actions, card_def.t_size));
+	}
+	make_card(card_def: CardDef) {
+		return new Card(card_def.name, card_def.energy_cost, card_def.description, card_def.actions, card_def.t_size);
 	}
 	draw_card() {
 		this.player_hand.push(this.player_deck[this.draw_pos]);
 		this.draw_pos += 1;
-		this.draw_pos %= this.player_deck.length;
+		if (this.draw_pos >= this.player_deck.length) {
+			this.shuffle();
+			this.draw_pos = 0;
+		}
 	}
+	add_cards(cards: number) {
+		if (this.state == State.Targeting) {
+			this.player_hand.splice(this.card_targeting.index, 0, this.card_targeting.card);
+			this.card_targeting = null;
+			this.state = State.Playing;
+		}
+		if (this.state == State.CardOnMouse) {
+			this.player_hand.splice(this.card_on_mouse.index, 0, this.card_on_mouse.card);
+			this.card_on_mouse = null;
+			this.state = State.Playing;
+		}
+		if (!(this.state == State.Playing)) return;
+		this.card_adds_left = cards;
+		this.state = State.AddingCards;
+		this.clicked_added_card = null;
+		this.cards_being_shown = selection(this, 3);
+		this.total_card_adds = cards;
+		this.card_adds_left --;
+	}
+		
 	next_turn() {
-		if (this.in_between_phase) return;
-		this.in_between_phase = true;
-		this.s_e_d = new Map(JSON.parse(JSON.stringify(Array.from(this.enemies))));
-		this.ibt_damage_dealt = false;
+		if (!(this.state == State.Playing)) return;
+		this.cur_card_trigger_eot = 0;
+		this.state = State.EndPhase;
+		this.triggering_card = null;
+		this.t_time = -1;
+	}
+	next_level() {
+		this.level += 1;
+		if (this.level >= LEVELS.length) {
+			this.state = State.GameOver;
+			return;
+		}
+		this.state = State.Playing;
+		this.add_cards(2);
+		this.max_energy = 0;
+		this.turn = -1;
+		this.perm_cards = [];
+		this.player_hand = [];
+		this.draw_pos = 0;
+		this.shuffle();
+		this.hp = this.maxhp;
+	}
+	start() {
+		this.state = State.Playing;
+		this.add_cards(6);
+		this.level += 1;
+		this.max_energy = 0;
+		this.turn = -1;
+		this.perm_cards = [];
+		this.player_hand = [];
+		this.draw_pos = 0;
+		this.shuffle();
+		this.hp = this.maxhp;
+	}
+	added_cards() {
+		if (this.card_adds_left > 0) {
+			this.clicked_added_card = null;
+			this.cards_being_shown = selection(this, 3);
+			this.card_adds_left --;
+		}else {
+			this.state = State.Playing;
+			this.draw_card();
+			this.draw_card();
+			this.next_turn();
+		}
 	}
 	shuffle() {
 		shuffle(this.player_deck);
 	}
 	update(){
-		if (this.in_between_phase) {
+		if (this.state != State.GameOver && this.enemies.size == 0 && this.turn >= LEVELS[this.level].length ) {
+			this.next_level();
+			return;
+		}
+		if (this.state == State.EndPhase) {
+			if (this.cur_card_trigger_eot >= this.perm_cards.length && this.triggering_card == null) {
+				this.state = State.InBetweenPhase;
+				this.s_e_d = new Map(JSON.parse(JSON.stringify(Array.from(this.enemies))));
+				this.ibt_damage_dealt = false;
+				return;
+			}
+			if (this.triggering_card == null){
+				let card = this.perm_cards[this.cur_card_trigger_eot].card.actions;
+				if (!card.eot_trigger) {
+				this.cur_card_trigger_eot ++;
+					return;
+				}else {
+					this.triggering_card = this.perm_cards[this.cur_card_trigger_eot];
+					this.t_time = 45;
+				this.cur_card_trigger_eot ++;
+					return;
+				}
+			} else{
+				if (this.t_time <= 0) {
+					this.triggering_card = null;
+				}else if (this.t_time == 20) {
+					this.triggering_card.card.actions.EOT(this, this.triggering_card);
+				}
+				this.t_time --;
+			}
+
+		}
+		if (this.state == State.InBetweenPhase) {
 			let something_happened = false;
 			let d = false;
 			for (let enemy of this.enemies) {
 				let e = this.s_e_d.get(enemy[0]);
 				if (e.y < 420) {
-					console.log("FDD", enemy[1].y, e.y);
 					if (enemy[1].y >= e.y + 80) {
 						enemy[1].y = e.y + 80;
 					}else {
@@ -238,10 +498,23 @@ class World {
 				this.ibt_damage_dealt = true;
 			}
 			if (!something_happened) {
-				this.in_between_phase = false;
+				this.state = State.Playing;
 				this.draw_card();
 				this.max_energy += 1;
 				this.cur_energy = this.max_energy;
+				this.turn += 1;
+				if (this.level >= LEVELS.length) {
+					return;
+				}
+				if (this.turn >= LEVELS[this.level].length) {
+					return;
+				}
+				console.log(this.turn, this.level);
+				for (let enemy of LEVELS[this.level][this.turn]) {
+					world.enemies.set(cur_id + 1, new Enemy(Math.random() * 1000 + 300,100,50,50, enemy[1], enemy[0]));
+					cur_id += 1;
+				}
+
 			}
 
 		}
@@ -264,7 +537,27 @@ class Camera {
 		this.camera_y = 0;
 	}
 	render(p5: P5, world: World){
+		console.log(world.state);
+		if (world.state == State.Start) {
+			p5.textStyle(p5.BOLD);
+			p5.textSize(40);
+			p5.textAlign(p5.CENTER);
+			p5.fill("black");
+			p5.noStroke();
+			p5.text("Click anywhere to start", WIDTH/2, HEIGHT/2);
+			return;
+		}
 
+		if (world.state == State.GameOver) {
+			p5.fill("black");
+			p5.noStroke();
+			p5.textStyle(p5.BOLD);
+			p5.textSize(40);
+			p5.textAlign(p5.CENTER);
+			p5.text("You Won!\n Click anywhere to restart", WIDTH/2, HEIGHT/2);
+			return;
+		}
+	if (world.state == State.Playing || world.state == State.InBetweenPhase || world.state == State.EndPhase || world.state == State.Targeting || world.state == State.CardOnMouse) {
 		p5.stroke(190);
 		p5.strokeWeight(3.5);
 		for (let x = 0; x < WIDTH; x+= 45) {
@@ -290,7 +583,7 @@ class Camera {
 		let hovered_card: number = null;
 		let total_width = Math.min(85 * world.player_hand.length, 900); // 180
 		let individual_width = total_width/world.player_hand.length; // 60
-		if (world.card_on_mouse == null) {
+		if (world.state == State.Playing) {
 			for (let i = 0; i < world.player_hand.length; i++) {
 				let x = (WIDTH-total_width-CARD_WIDTH)/2.0 + individual_width * i;
 				let w = CARD_WIDTH;
@@ -312,6 +605,9 @@ class Camera {
 				}
 			}
 		}
+		if (world.state == State.InBetweenPhase || world.state == State.EndPhase) {
+			hovered_card = null;
+		}
 		world.cur_hovered_card = hovered_card;
 
 
@@ -322,11 +618,27 @@ class Camera {
 				card.render(p5, x,CARD_Y, 1);
 			}
 		}
+
+
 		if (hovered_card != null) {
 			let x = (WIDTH-total_width-CARD_WIDTH)/2.0 + individual_width * hovered_card;
 			world.player_hand[hovered_card].render(p5, x,CARD_Y, 1.1);
-			world.player_hand[hovered_card].render(p5, 1100,300, 2.6);
+			world.player_hand[hovered_card].render(p5, 1100,250, 2.4);
 		}
+
+
+		let j = 0;
+		let h = -1;
+		for (let _ of world.perm_cards) {
+			if (p5.mouseX > j * 80 && p5.mouseX < j * 80 + CARD_WIDTH * 0.5 && p5.mouseY > 440 && p5.mouseY < 440 + CARD_HEIGHT * 0.5) {
+				h = j;
+			}
+			j++;
+		}
+		if (h >= 0 && world.state == State.Playing) {
+			world.perm_cards[h].card.render(p5, 1100, 250, 2.4);
+		}
+
 
 		p5.image(hpb, 50,50, 350, 25);
 		p5.noStroke();
@@ -338,56 +650,110 @@ class Camera {
 		}
 
 
-		if (world.card_on_mouse != null) {
+		if (world.state as State == State.CardOnMouse) {
 			world.card_on_mouse.card.render(p5, p5.mouseX + world.card_on_mouse.x_offset,p5.mouseY + world.card_on_mouse.y_offset, 1.3);
 		}
-		if (world.card_targeting != null) {
-			world.card_targeting.card.render(p5, 900,250, 1.5);
-			targetingLine(p5, 870 + CARD_WIDTH * 1.5/2, 350, p5.mouseX, p5.mouseY);
+		if (world.state as State == State.Targeting) {
+			world.card_targeting.card.render(p5, 1000,250, 1.5);
+			targetingLine(p5, 970 + CARD_WIDTH * 1.5/2, 350, p5.mouseX, p5.mouseY);
+			if (world.card_targeting.targets_enemies) {
+				world.cur_hovered_enemy = null;
+				for (let enemy of world.enemies) {
+					if (enemy[1].x + enemy[1].w > p5.mouseX && enemy[1].x < p5.mouseX && enemy[1].y + enemy[1].h > p5.mouseY && enemy[1].y < p5.mouseY) {
+						world.cur_hovered_enemy = enemy[0];
+					}
+				}
 
-			world.cur_hovered_enemy = null;
-			for (let enemy of world.enemies) {
-				if (enemy[1].x + enemy[1].w > p5.mouseX && enemy[1].x < p5.mouseX && enemy[1].y + enemy[1].h > p5.mouseY && enemy[1].y < p5.mouseY) {
-					world.cur_hovered_enemy = enemy[0];
+				if (world.cur_hovered_enemy != null) {
+					let e = world.enemies.get(world.cur_hovered_enemy);
+					p5.stroke(255,0,0);
+					p5.strokeWeight(5);
+					p5.line(e.x-10, e.y-10, e.x-10, e.y);
+					p5.line(e.x-10, e.y-10, e.x, e.y-10);
+					p5.line(e.x+e.w+10, e.y-10, e.x+e.w, e.y-10);
+					p5.line(e.x+e.w+10, e.y-10, e.x+e.w+10, e.y);
+					p5.line(e.x-10, e.y+e.h+10, e.x, e.y + e.h + 10);
+					p5.line(e.x-10, e.y+e.h+10, e.x - 10, e.y + e.h);
+					p5.line(e.x+e.h+10, e.y+e.h+10, e.x +e.h, e.y + e.h+10);
+					p5.line(e.x+e.h+10, e.y+e.h+10, e.x +e.h+10, e.y + e.h);
+				}
+				for (let target of world.card_targeting.targets_e) {
+					let e = world.enemies.get(target);
+					p5.stroke(255,0,0);
+					p5.strokeWeight(5);
+					p5.line(e.x-10, e.y-10, e.x-10, e.y);
+					p5.line(e.x-10, e.y-10, e.x, e.y-10);
+					p5.line(e.x+e.w+10, e.y-10, e.x+e.w, e.y-10);
+					p5.line(e.x+e.w+10, e.y-10, e.x+e.w+10, e.y);
+					p5.line(e.x-10, e.y+e.h+10, e.x, e.y + e.h + 10);
+					p5.line(e.x-10, e.y+e.h+10, e.x - 10, e.y + e.h);
+					p5.line(e.x+e.w+10, e.y+e.h+10, e.x +e.w, e.y + e.h+10);
+					p5.line(e.x+e.w+10, e.y+e.h+10, e.x +e.w+10, e.y + e.h);
 				}
 			}
+			if (world.card_targeting.targets_cards) {
+				world.cur_t_hovered_card = null;
+				for (let i = 0; i < world.perm_cards.length; i++) {
+					if (p5.mouseX > i * 80 + CARD_WIDTH * 0.25 && p5.mouseX < i * 80 + CARD_WIDTH * 0.75 && p5.mouseY > 440 + CARD_HEIGHT * 0.25 && p5.mouseY < 440 + CARD_HEIGHT * 0.75) {
+						world.cur_t_hovered_card = i;
+					}	
+				}
+				if (world.cur_t_hovered_card != null) {
+					let x = world.cur_t_hovered_card * 80 + CARD_WIDTH * 0.25;
+					let w = CARD_WIDTH * 0.5;
+					let y = 440 + CARD_HEIGHT * 0.25;
+					let h = CARD_HEIGHT * 0.5;
 
-			if (world.cur_hovered_enemy != null) {
-				let e = world.enemies.get(world.cur_hovered_enemy);
-				p5.stroke(255,0,0);
-				p5.strokeWeight(5);
-				p5.line(e.x-10, e.y-10, e.x-10, e.y);
-				p5.line(e.x-10, e.y-10, e.x, e.y-10);
-				p5.line(e.x+e.w+10, e.y-10, e.x+e.w, e.y-10);
-				p5.line(e.x+e.w+10, e.y-10, e.x+e.w+10, e.y);
-				p5.line(e.x-10, e.y+e.h+10, e.x, e.y + e.h + 10);
-				p5.line(e.x-10, e.y+e.h+10, e.x - 10, e.y + e.h);
-				p5.line(e.x+e.h+10, e.y+e.h+10, e.x +e.h, e.y + e.h+10);
-				p5.line(e.x+e.h+10, e.y+e.h+10, e.x +e.h+10, e.y + e.h);
+					p5.stroke(255,0,0);
+					p5.strokeWeight(5);
+					p5.line(x-10, y-10, x-10, y);
+					p5.line(x-10, y-10, x, y-10);
+					p5.line(x+w+10, y-10, x+w, y-10);
+					p5.line(x+w+10, y-10, x+w+10, y);
+					p5.line(x-10, y+h+10, x, y + h + 10);
+					p5.line(x-10, y+h+10, x - 10, y + h);
+					p5.line(x+w+10, y+h+10, x +w, y + h+10);
+					p5.line(x+w+10, y+h+10, x +w+10, y + h);
+				}
+				for (let target of world.card_targeting.targets_c) {
+					let x = target * 80 + CARD_WIDTH * 0.25;
+					let w = CARD_WIDTH * 0.5;
+					let y = 440 + CARD_HEIGHT * 0.25;
+					let h = CARD_HEIGHT * 0.5;
 
+					p5.stroke(255,0,0);
+					p5.strokeWeight(5);
+					p5.line(x-10, y-10, x-10, y);
+					p5.line(x-10, y-10, x, y-10);
+					p5.line(x+w+10, y-10, x+w+10, y);
+					p5.line(x+w+10, y-10, x+w, y-10);
+					p5.line(x-10, y+h+10, x, y + h + 10);
+					p5.line(x-10, y+h+10, x - 10, y + h);
+					p5.line(x+w+10, y+h+10, x +w, y + h+10);
+					p5.line(x+w+10, y+h+10,x +w+10, y + h);
+				}
 			}
-			for (let target of world.card_targeting.targets) {
-				let e = world.enemies.get(target);
-				p5.stroke(255,0,0);
-				p5.strokeWeight(5);
-				p5.line(e.x-10, e.y-10, e.x-10, e.y);
-				p5.line(e.x-10, e.y-10, e.x, e.y-10);
-				p5.line(e.x+e.w+10, e.y-10, e.x+e.w, e.y-10);
-				p5.line(e.x+e.w+10, e.y-10, e.x+e.w+10, e.y);
-				p5.line(e.x-10, e.y+e.h+10, e.x, e.y + e.h + 10);
-				p5.line(e.x-10, e.y+e.h+10, e.x - 10, e.y + e.h);
-				p5.line(e.x+e.h+10, e.y+e.h+10, e.x +e.h, e.y + e.h+10);
-				p5.line(e.x+e.h+10, e.y+e.h+10, e.x +e.h+10, e.y + e.h);
-			}
-
 		}
 
+		if (world.triggering_card != null && world.t_time < 30 && world.t_time >= 0) {
+			world.triggering_card.card.render(p5, 1000,250, 1.5);
+		}
+
+		let i = 0;
+		for (let perm of world.perm_cards) {
+			perm.card.render(p5,i * 80, 440, 0.5);
+			if (world.triggering_card != null && i == world.cur_card_trigger_eot - 1 && world.t_time >= 3 && world.t_time <= 35) {
+				targetingLine(p5, i*80 + CARD_WIDTH * 0.5, 440 + CARD_HEIGHT * 0.25, 1000, 250 + CARD_HEIGHT * 0.75);
+
+			}
+			i++;
+		}
 
 
 		p5.stroke(20);
 		p5.strokeWeight(3);
 		p5.fill(0,150,200);
-		if (p5.mouseX > 900 && p5.mouseX < 1000 && p5.mouseY > CARD_Y - 80 && p5.mouseY < CARD_Y - 30 && world.card_targeting == null) {
+		if (p5.mouseX > 900 && p5.mouseX < 1000 && p5.mouseY > CARD_Y - 80 && p5.mouseY < CARD_Y - 30 && world.state == State.Playing) {
 			p5.fill(200,200,240);
 		}
 		p5.rect(900,CARD_Y - 80,100,50, 14);
@@ -401,7 +767,24 @@ class Camera {
 		p5.text("End Turn", 950, CARD_Y - 50);
 
 
-		if (world.card_targeting != null && world.card_targeting.total_targets > 1) {
+		p5.stroke(20);
+		p5.strokeWeight(3);
+		p5.fill(20,200,20);
+		if (p5.mouseX > WIDTH-150 && p5.mouseX < WIDTH-31 && p5.mouseY > 23 && p5.mouseY < 63 && world.state == State.Playing) {
+			p5.fill(80,255,30);
+		}
+		p5.rect(WIDTH-150,23,120,40, 14);
+		p5.textAlign(p5.CENTER);
+		p5.noStroke();
+		p5.textSize(20);
+		p5.textStyle(p5.BOLD);
+		p5.fill(90, 150);
+		p5.text("Show Deck", WIDTH - 87, 53);
+		p5.fill(255);
+		p5.text("Show Deck", WIDTH - 90, 50);
+
+
+		if (world.state as State == State.Targeting && world.card_targeting.total_targets > 1) {
 			p5.stroke(20);
 			p5.strokeWeight(3);
 			p5.fill(200,150,0);
@@ -428,6 +811,162 @@ class Camera {
 			p5.text("Not enough energy", WIDTH/2, HEIGHT/2);
 		}
 		world.cant_afford_text -= 1;
+
+		}
+		if (world.state == State.AddingCards) {
+			p5.noStroke();
+			p5.textSize(30);
+			p5.fill(0);
+			p5.textStyle(p5.NORMAL);
+			if (world.level == 0) { // TODO
+				p5.text("Choose a card to add to your starting deck! (" + (world.total_card_adds - world.card_adds_left)+"/" + world.total_card_adds + ")",WIDTH/2,200);
+			}else {
+				p5.text("Level Complete! \n Choose a card to add to your deck! (" + (world.total_card_adds - world.card_adds_left)+"/" + world.total_card_adds + ")",WIDTH/2,200);
+			}
+			world.cards_being_shown[0].render(p5, 350 + 13.88,320, 1.3);
+			world.cards_being_shown[1].render(p5, 650 + 13.88,320, 1.3);
+			world.cards_being_shown[2].render(p5, 950 + 13.88,320, 1.3);
+			let c = false;
+			let x: number;
+			let w = CARD_WIDTH * 1.17;
+			let y = 300;
+			let h = CARD_HEIGHT * 1.25;
+			if (p5.mouseX >= 350 + 13.88 && p5.mouseX <= 350 + 13.88 + 1.17 * CARD_WIDTH && p5.mouseY >= 310 && p5.mouseY <= 310 + 1.25 * CARD_HEIGHT && world.clicked_added_card != 0) {
+				x = 353;
+				c = true;
+			}
+			if (p5.mouseX >= 650 + 13.88 && p5.mouseX <= 650 + 13.88 + 1.17 * CARD_WIDTH && p5.mouseY >= 310 && p5.mouseY <= 310 + 1.25 * CARD_HEIGHT && world.clicked_added_card != 1) {
+				x = 653;
+				c = true;
+			}
+			if (p5.mouseX >= 950 + 13.88 && p5.mouseX <= 950 + 13.88 + 1.17 * CARD_WIDTH && p5.mouseY >= 310 && p5.mouseY <= 310 + 1.25 * CARD_HEIGHT && world.clicked_added_card != 2) {
+				x = 953;
+				c = true;
+			}
+			if (c) {
+				p5.stroke(255);
+				p5.strokeWeight(5);
+				p5.line(x-10, y-10, x-10, y);
+				p5.line(x-10, y-10, x, y-10);
+				p5.line(x+w+10, y-10, x+w+10, y);
+				p5.line(x+w+10, y-10, x+w, y-10);
+				p5.line(x-10, y+h+10, x, y + h + 10);
+				p5.line(x-10, y+h+10, x - 10, y + h);
+				p5.line(x+w+10, y+h+10, x +w, y + h+10);
+				p5.line(x+w+10, y+h+10,x +w+10, y + h);
+			}
+
+
+			c = false;
+			x = null;
+			w = CARD_WIDTH * 1.17 + 10;
+			y = 295;
+			h = CARD_HEIGHT * 1.25 + 10;
+
+			if (world.clicked_added_card == 0) {
+				x = 353 - 5;
+				c = true;
+			}
+			if (world.clicked_added_card == 1) {
+				x = 653 - 5;
+				c = true;
+			}
+			if (world.clicked_added_card == 2) {
+				x = 953 - 5;
+				c = true;
+			}
+			if (c) {
+				p5.stroke(255);
+				p5.strokeWeight(8);
+				p5.line(x-10, y-10, x-10, y);
+				p5.line(x-10, y-10, x, y-10);
+				p5.line(x+w+10, y-10, x+w+10, y);
+				p5.line(x+w+10, y-10, x+w, y-10);
+				p5.line(x-10, y+h+10, x, y + h + 10);
+				p5.line(x-10, y+h+10, x - 10, y + h);
+				p5.line(x+w+10, y+h+10, x +w, y + h+10);
+				p5.line(x+w+10, y+h+10,x +w+10, y + h);
+			}
+
+
+
+			p5.stroke(20);
+			p5.strokeWeight(3);
+			p5.fill(200,150,0);
+			if (p5.mouseX > WIDTH/2 - 170/2 - 14 && p5.mouseX < WIDTH/2 + 170/2 - 14 && p5.mouseY > 700 - 50/2 && p5.mouseY < 750 - 50/2) {
+				p5.fill(240,200,200);
+			}
+			p5.rectMode(p5.CENTER);
+			p5.rect(WIDTH/2 - 14,700,170,50, 14);
+			p5.rectMode(p5.CORNER);
+			p5.textAlign(p5.CENTER);
+			p5.noStroke();
+			p5.textSize(20);
+			p5.textStyle(p5.BOLD);
+			p5.fill(90, 150);
+			p5.text("Confirm", WIDTH/2 + 3 - 14, 707);
+			p5.fill(255);
+			p5.text("Confirm", WIDTH/2 - 14, 704);
+		}
+		else if (world.state == State.ShowingDeck) {
+			let hovered_card = null;
+
+			let total_width = Math.min(65 * world.player_hand.length, 900); // 180
+			let individual_width = total_width/world.player_hand.length; // 60
+			for (let i = 0; i < world.player_deck.length; i++) {
+				let x = (WIDTH-total_width-(CARD_WIDTH * 0.8))/2.0 + individual_width * i;
+				let w = CARD_WIDTH * 0.8;
+				let h = CARD_HEIGHT * 0.9;
+				let y = 150;
+				if (i+1 == world.cur_hovered_card) {
+					w-=40.1 * 0.8;
+				}
+				if (i == world.cur_hovered_card) {
+					x-= 6.1 * 0.8;
+					w+=7 * 0.8;
+					y -= 8.45 * 0.8;
+					h += 16.9 * 0.9;
+				}
+
+				if (p5.mouseY >= y && p5.mouseY <= y + h && p5.mouseX >= x && p5.mouseX <= x + w) {
+					hovered_card = i;
+					break;
+				}
+			}
+			world.cur_hovered_card = hovered_card;
+
+
+		for (let i = world.player_deck.length - 1; i >= 0; i--) {
+			let card = world.player_deck[i];
+			let x = (WIDTH-total_width-CARD_WIDTH)/2.0 + individual_width * i;
+			if (!(i==hovered_card)) {
+				card.render(p5, x,150, 0.8);
+			}
+		}
+
+
+		if (hovered_card != null) {
+			let x = (WIDTH-total_width-CARD_WIDTH)/2.0 + individual_width * hovered_card;
+			world.player_deck[hovered_card].render(p5, x,150, 0.95);
+			world.player_deck[hovered_card].render(p5, WIDTH/2 - CARD_WIDTH * 0.7,450, 2);
+		}
+			p5.stroke(20);
+			p5.strokeWeight(3);
+			p5.fill(200,20,20);
+			if (p5.mouseX > WIDTH-70 && p5.mouseX < WIDTH-31 && p5.mouseY > 23 && p5.mouseY < 63) {
+				p5.fill(255,30,30);
+			}
+			p5.rect(WIDTH-70,23,40,40, 14);
+			p5.textAlign(p5.CENTER);
+			p5.noStroke();
+			p5.textSize(20);
+			p5.textStyle(p5.BOLD);
+			p5.fill(90, 150);
+			p5.text("X", WIDTH - 47, 53);
+			p5.fill(255);
+			p5.text("X", WIDTH - 50, 50);
+		}
+
 
 	}
 }
@@ -478,70 +1017,139 @@ const WIDTH: number = 1470;
 
 let world = new World();
 let camera = new Camera();
-const card_1 = new CardDef("card 1", 1, "deal 1 damage to target enemy", new CardActions(
+const card_1 = new CardDef("Quickshot", 1, "deal 1 damage to target enemy", new CardActions(
 	(world: World, card: CardOnMouse) => {
-		world.card_targeting = new CardTargeting(card.card, card.index, 1); 
+		world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); 
+		console.log("TESTFG");
+		world.state = State.Targeting;
 	},
 	(world: World, card: CardTargeting) => {
-		world.enemies.get(card.targets[0]).hp -= 1;
+		world.enemies.get(card.targets_e[0]).hp -= 1;
 		world.cur_energy -= card.card.energy_cost;
+		world.state = State.Playing;
 	}
 ));
-const card_2 = new CardDef("card 2", 3, "deal 2 damage to up to 3 target enemies", new CardActions(
+const card_2 = new CardDef("Lightning Bolt", 3, "deal 2 damage to up to 3 target enemies", new CardActions(
 	(world: World, card: CardOnMouse) => {
-		world.card_targeting = new CardTargeting(card.card, card.index, 3); 
+		world.card_targeting = new CardTargeting(card.card, card.index, 3, true, false); 
+		console.log("TESTFG");
+		world.state = State.Targeting;
 	},
 	(world: World, card: CardTargeting) => {
-		for (let target of card.targets) {
+		for (let target of card.targets_e) {
 			world.enemies.get(target).hp -= 2;
 		}
 		world.cur_energy -= card.card.energy_cost;
+		world.state = State.Playing;
 	}
 ))
-const card_3 = new CardDef("card 3", 4, "deal 3 damage to up to 2 target enemies, draw a card", new CardActions(
+const card_3 = new CardDef("Smite", 4, "deal 3 damage to up to 2 target enemies, draw a card", new CardActions(
 	(world: World, card: CardOnMouse) => {
-		world.card_targeting = new CardTargeting(card.card, card.index, 2); 
+		world.card_targeting = new CardTargeting(card.card, card.index, 2, true, false); 
+		console.log("TESTFG");
+		world.state = State.Targeting;
 	},
 	(world: World, card: CardTargeting) => {
-		for (let target of card.targets) {
+		for (let target of card.targets_e) {
 			world.enemies.get(target).hp -= 3;
 		}
 		world.draw_card();
 		world.cur_energy -= card.card.energy_cost;
+		world.state = State.Playing;
 	}
 ))
-for (let i = 0; i < 30; i++) {
-	world.add_card_to_deck(card_1);
-}
-for (let i = 0; i < 12; i++) {
-	world.add_card_to_deck(card_2);
-}
-for (let i = 0; i < 8; i++) {
-	world.add_card_to_deck(card_3);
-}
-world.shuffle();
-world.draw_card();
-world.draw_card();
-world.draw_card();
-world.enemies.set(0, new Enemy(500,100,50,50,10, 5));
-world.enemies.set(1, new Enemy(900,100,50,50,7, 8));
-world.draw_card();
-world.draw_card();
-world.draw_card();
-world.draw_card();
+const card_4 = new CardDef("Overwhelming Wave", 4, "deal 2 damage to to all enemies", new CardActions(
+	(world: World, card: CardOnMouse) => {
+		for (let enemy of world.enemies) {
+			enemy[1].hp -= 2;
+		}
+		world.cur_energy -= card.card.energy_cost;
+		world.state = State.Playing;
+		console.log(world.state);
+	}
+))
+
+
+
+const card_5 = new CardDef("Fiery Inferno", 3, "for the rest of the game, at the end of each turn, deal 2 damage to to all enemies, and take 2 damage", new CardActions(
+	(world: World, card: CardOnMouse) => {
+		world.perm_cards.push(new CardPerm(card.card));
+		world.cur_energy -= card.card.energy_cost;
+		world.state = State.Playing;
+		console.log(world.state);
+	},(_w,_c) => {},
+	(world: World, _card: CardPerm) => {
+		for (let enemy of world.enemies) {
+			enemy[1].hp -= 2;
+		}
+		world.hp -= 2;
+		return true;
+	}
+), 7)
+const card_6 = new CardDef("Nature's Reclamation", 2, "remove a card on the battlefield, then, heal for 2.", new CardActions(
+	(world: World, card: CardOnMouse) => {
+		world.card_targeting = new CardTargeting(card.card, card.index, 1, false, true);
+		world.state = State.Targeting;
+		console.log(world.state);
+	},
+	(world: World, card: CardTargeting) => {
+		world.perm_cards.splice(card.targets_c[0],1);
+		world.hp = Math.min(world.hp + 2, world.maxhp);
+		world.state = State.Playing;
+	},
+))
+
+
+const card_7 = new CardDef("FIREBALL", 0, "Deal X damage evenly spread (rounded down) amoung any number of target enemies, where X is the 1.5 times the amount of energy you have left (rounded down). For each target beyond the first, decrease X by 1, X cannot be negative. Consume all of your energy.", new CardActions(
+	(world: World, card: CardOnMouse) => {
+		world.card_targeting = new CardTargeting(card.card, card.index, 9999999, true, false);
+		world.state = State.Targeting;
+	},
+	(world: World, card: CardTargeting) => {
+		let total_damage = Math.floor(world.cur_energy * 1.5);
+		total_damage = Math.max(total_damage - card.targets_e.length + 1, 0);
+		let to_each = Math.floor(total_damage/card.targets_e.length);
+
+		for (let target of card.targets_e) {
+			world.enemies.get(target).hp -= to_each;
+		}
+		world.cur_energy = 0;
+		world.state = State.Playing;
+	}
+), 5)
+
+
+const card_8 = new CardDef("Healing Blessing", 2, "Heal for 3, then, draw a card.", new CardActions(
+	(world: World, card: CardOnMouse) => {
+		world.cur_energy -= card.card.energy_cost;
+		world.hp = Math.min(world.hp + 3, world.maxhp);
+		world.draw_card();
+		world.state = State.Playing;
+	},
+	(world: World, card: CardTargeting) => {
+	}
+))
+let cur_id = 1;
 
 let cardimg: P5.Image;
 let hpb: P5.Image;
 let eb: P5.Image;
+let f1: P5.Image;
+let f2: P5.Image;
+let li: P5.Image;
+let ct: P5.Image;
 const sketch = (p5: P5) => { 
 	p5.preload = async function() {
-		cardimg = p5.loadImage("https://ryanyun2010.github.io/DWI/img/card.png");
-		eb = p5.loadImage("https://ryanyun2010.github.io/DWI/img/energy.png");
-		hpb = p5.loadImage("https://ryanyun2010.github.io/DWI/img/hp.png");
+		cardimg = p5.loadImage("./img/card.png");
+		eb = p5.loadImage("./img/energy.png");
+		hpb = p5.loadImage("./img/hp.png");
+		f1 = p5.loadImage("./img/fireball.png");
+		f2 = p5.loadImage("./img/fire2.png");
+		li = p5.loadImage("./img/lightning.png");
+		ct = p5.loadImage("./img/top.png");
 	}
 
 	p5.setup = function () {
-		console.log("test");
 		p5.createCanvas(WIDTH,HEIGHT);
 	}
 
@@ -551,8 +1159,44 @@ const sketch = (p5: P5) => {
 		camera.render(p5, world);
 	}
 	p5.mousePressed = function() {
-		if (world.in_between_phase) return;
-		if (world.card_on_mouse == null) {
+		if (world.state == State.GameOver) {
+			world = new World();
+		}
+		if (world.state == State.Start) {
+			world.level = -1;
+			world.shuffle();
+			world.start();
+			return;
+		}
+		if (world.state == State.ShowingDeck) {
+			if (p5.mouseX > WIDTH-70 && p5.mouseX < WIDTH-31 && p5.mouseY > 23 && p5.mouseY < 63) {
+				world.state = State.Playing;
+			}
+			return;
+		}
+		if (world.state == State.AddingCards) {
+			if (p5.mouseX >= 350 + 13.88 && p5.mouseX <= 350 + 13.88 + 1.17 * CARD_WIDTH && p5.mouseY >= 310 && p5.mouseY <= 310 + 1.25 * CARD_HEIGHT && world.clicked_added_card != 0) {
+				console.log("TEST");
+				world.clicked_added_card = 0;
+			}
+			if (p5.mouseX >= 650 + 13.88 && p5.mouseX <= 650 + 13.88 + 1.17 * CARD_WIDTH && p5.mouseY >= 310 && p5.mouseY <= 310 + 1.25 * CARD_HEIGHT && world.clicked_added_card != 1) {
+				world.clicked_added_card = 1;
+			}
+			if (p5.mouseX >= 950 + 13.88 && p5.mouseX <= 950 + 13.88 + 1.17 * CARD_WIDTH && p5.mouseY >= 310 && p5.mouseY <= 310 + 1.25 * CARD_HEIGHT && world.clicked_added_card != 2) {
+				world.clicked_added_card = 2;
+			}
+			if (p5.mouseX > WIDTH/2 - 170/2 - 14 && p5.mouseX < WIDTH/2 + 170/2 - 14 && p5.mouseY > 700 - 50/2 && p5.mouseY < 750 - 50/2 && world.clicked_added_card != null) {
+				world.player_deck.push(world.cards_being_shown[world.clicked_added_card]);
+				world.added_cards();
+			}
+
+
+			return;
+		}
+		if (p5.mouseX > WIDTH-150 && p5.mouseX < WIDTH-31 && p5.mouseY > 23 && p5.mouseY < 63 && world.state == State.Playing) {
+			world.state = State.ShowingDeck;
+		}
+		if (world.state == State.Playing) {
 			let hovered_card: number = null;
 			let hcx = null;
 			let total_width = Math.min(85 * world.player_hand.length, 900); // 180
@@ -580,44 +1224,63 @@ const sketch = (p5: P5) => {
 			}
 			if (hovered_card != null) {
 				world.card_on_mouse = new CardOnMouse(world.player_hand[hovered_card],hovered_card, hcx - p5.mouseX, CARD_Y - p5.mouseY);
+				world.state = State.CardOnMouse;
+				console.log("RFG", world.card_on_mouse == null);
 				world.player_hand.splice(hovered_card,1);
+
 			}
 		}
-		if (world.card_targeting != null && world.cur_hovered_enemy != null) {
-			world.card_targeting.targets.push(world.cur_hovered_enemy);
+		if (p5.mouseX > 900 && p5.mouseX < 1000 && p5.mouseY > CARD_Y - 80 && p5.mouseY < CARD_Y - 30 && world.state == State.Playing) {
+			world.next_turn();
+		}
+		if (world.card_targeting != null && world.cur_hovered_enemy != null && world.card_targeting.targets_enemies) {
+			if (!world.card_targeting.targets_e.includes(world.cur_hovered_enemy)) {
+			world.card_targeting.targets_e.push(world.cur_hovered_enemy);
 			world.card_targeting.targets_left --;
 			if (world.card_targeting.targets_left == 0) {
 				world.card_targeting.card.actions.onTarget(world, world.card_targeting);
 				world.card_targeting = null;
 			}
+			}
 		}
-		if (world.card_targeting != null && world.cur_hovered_enemy == null) {
+		if (world.card_targeting != null && world.cur_t_hovered_card != null && world.card_targeting.targets_cards) {
+			if (!world.card_targeting.targets_c.includes(world.cur_t_hovered_card)) {
+			world.card_targeting.targets_c.push(world.cur_t_hovered_card);
+			world.card_targeting.targets_left --;
+			if (world.card_targeting.targets_left == 0) {
+				world.card_targeting.card.actions.onTarget(world, world.card_targeting);
+				world.card_targeting = null;
+			}
+			}
+		}
+		if (world.card_targeting != null && ((world.cur_hovered_enemy == null && world.card_targeting.targets_enemies) || (world.cur_t_hovered_card == null && world.card_targeting.targets_cards)) && !(p5.mouseX > 900 && p5.mouseX < 1000 && p5.mouseY > CARD_Y - 80 && p5.mouseY < CARD_Y - 30)) {
 			if (p5.mouseX > 265 && p5.mouseX < 430 && p5.mouseY > CARD_Y - 80 && p5.mouseY < CARD_Y - 30 && world.card_targeting.total_targets >= 1) {
 				world.card_targeting.card.actions.onTarget(world, world.card_targeting);
 				world.card_targeting = null;
 			}else {
 				world.player_hand.splice(world.card_targeting.index, 0, world.card_targeting.card);
 				world.card_targeting = null;
+				world.state = State.Playing;
 			}
-		}
-		if (p5.mouseX > 900 && p5.mouseX < 1000 && p5.mouseY > CARD_Y - 80 && p5.mouseY < CARD_Y - 30 && world.card_targeting == null) {
-			world.next_turn();
 		}
 	}
 	p5.mouseReleased = function () {
-		if (world.card_on_mouse != null) {
+		if (world.state == State.CardOnMouse) {
 			if (p5.mouseX > 0 && p5.mouseX < WIDTH && p5.mouseY > 0 && p5.mouseY < CARD_Y - 50) {
 				if (world.cur_energy >= world.card_on_mouse.card.energy_cost) {
 					world.card_on_mouse.card.actions.onCast(world, world.card_on_mouse);
 					world.card_on_mouse = null;
-				}else {
+				}
+				else {
 					world.cant_afford_text = 20;
 					world.player_hand.splice(world.card_on_mouse.index, 0, world.card_on_mouse.card);
 					world.card_on_mouse = null;
+					world.state = State.Playing;
 				}
 			}else {
 				world.player_hand.splice(world.card_on_mouse.index, 0, world.card_on_mouse.card);
 				world.card_on_mouse = null;
+				world.state = State.Playing;
 			}
 		}
 	}
