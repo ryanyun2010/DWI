@@ -599,6 +599,10 @@ class Camera {
             p5.noStroke();
             p5.fill("red");
             p5.rect(51.7, 52, 346.6 * world.hp / world.maxhp, 21);
+            p5.fill(0);
+            p5.textStyle(p5.BOLD);
+            p5.textSize(17);
+            p5.text(world.hp + "/" + world.maxhp, 370, 42);
             for (let i = 0; i < world.cur_energy; i++) {
                 p5.image(eb, 48 + (i % 10) * 36.5, 80 + 36.5 * Math.floor(i / 10), 27, 27);
             }
