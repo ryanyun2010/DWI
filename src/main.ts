@@ -8,8 +8,7 @@ enum EB {
 	Speedy,
 	Big
 }
-
-const LEVELS = [
+const START_LEVELS = [
 [
  [[5,5,[]]],
  [],
@@ -46,6 +45,8 @@ const LEVELS = [
 ],
 ]
 
+let LEVELS = []
+
 
 
 
@@ -53,10 +54,10 @@ const LEVELS = [
 class CardDef {
 	name: string;
 	energy_cost: number;
-	description: (additional_damage: number) => string;
+	description: (additional_damage: number, tracker: number) => string;
 	actions: CardActions;
 	t_size: number;
-	constructor(name: string, energy_cost: number, description: (additional_damage: number) => string, actions: CardActions, t_size?: number){
+	constructor(name: string, energy_cost: number, description: (additional_damage: number, tracker: number) => string, actions: CardActions, t_size?: number){
 		this.name = name;
 		this.energy_cost = energy_cost;
 		this.description = description;
@@ -69,12 +70,13 @@ class CardDef {
 class Card {
 	name: string;
 	energy_cost: number;
-	description: (additional_damage: number) => string;
+	description: (additional_damage: number, tracker: number) => string;
 	actions: CardActions;
 	t_size: number;
 	card_image: P5.Image;
 	base_energy_cost: number;
-	constructor(name: string, energy_cost: number, description: (additional_damage: number) => string, actions: CardActions, t_size?: number, card_image?: P5.Image){
+	tracker: number;
+	constructor(name: string, energy_cost: number, description: (additional_damage: number, tracker: number) => string, actions: CardActions, t_size?: number, card_image?: P5.Image){
 		this.name = name;
 		this.energy_cost = energy_cost;
 		this.description = description;
@@ -82,9 +84,10 @@ class Card {
 		this.t_size = t_size || 9;
 		this.card_image = card_image;
 		this.base_energy_cost = energy_cost;
+		this.tracker = 0;
 	}
 	desc() {
-		return this.description(additional_damage);
+		return this.description(additional_damage, this.tracker);
 	}
 	render(p5: P5, x: number, y: number, factor: number) {
 		p5.fill(25);
@@ -207,19 +210,19 @@ class Enemy {
 		p5.rect(this.x, this.y, this.w, this.h);
 		p5.fill(0);
 		p5.strokeWeight(2);
-		p5.rect(this.x - this.w/2, this.y - 25, this.w * 2, 15);
+		p5.rect(this.x - this.w/2, this.y - 26, this.w * 2, 18);
 		p5.fill("red");
-		p5.rect(this.x - this.w/2 + 1, this.y - 24, (this.w * 2 - 2) * this.hp/this.max_hp, 13);
+		p5.rect(this.x - this.w/2 + 1, this.y - 25, (this.w * 2 - 2) * this.hp/this.max_hp, 16);
 		p5.fill(255);
 		p5.noStroke();
 		p5.textStyle(p5.BOLD);
 		p5.textSize(30);
 		p5.text(this.damage, this.x + this.w/2, this.y + this.h/2 + 10);
 		p5.textStyle(p5.BOLD);
-		p5.fill(0);
-		p5.textSize(16);
-		p5.textAlign(p5.LEFT);
-		p5.text(this.hp + "/" + this.max_hp, this.x + this.w, this.y - 33);
+		p5.fill(255);
+		p5.textSize(13);
+		p5.textAlign(p5.RIGHT);
+		p5.text(this.hp + "/" + this.max_hp, this.x + this.w * 1.5 - 5, this.y - 12.8);
 		p5.textAlign(p5.CENTER);
 
 	}
@@ -254,30 +257,32 @@ function select(world: World): Card {
 	let r = Math.random();
 	if (r < 10/96) {
 		return world.make_card(card_1);
-	} else if (r < 18/96) {
+	} else if (r < 18/104) {
 		return world.make_card(card_2);
-	} else if (r < 25/96) {
+	} else if (r < 25/104) {
 		return world.make_card(card_3);
-	} else if (r < 33/96) {
+	} else if (r < 33/104) {
 		return world.make_card(card_4);
-	} else if (r < 40/96) {
+	} else if (r < 40/104) {
 		return world.make_card(card_5);
-	} else if (r < 46/96) {
+	} else if (r < 46/104) {
 		return world.make_card(card_6);
-	} else if (r < 54/96){
+	} else if (r < 54/104){
 		return world.make_card(card_7);
-	} else if (r < 62/96){
+	} else if (r < 62/104){
 		return world.make_card(card_8);
-	} else if (r < 71/96) {
+	} else if (r < 71/104) {
 		return world.make_card(card_9);
-	} else if (r < 77/96) {
+	} else if (r < 77/104) {
 		return world.make_card(card_10);
-	} else if (r < 82/96) {
+	} else if (r < 82/104) {
 		return world.make_card(card_11);
-	} else if (r < 90/96){
+	} else if (r < 90/104){
 		return world.make_card(card_12);
-	} else {
+	} else if (r < 96/104){
 		return world.make_card(card_13);
+	} else {
+		return world.make_card(card_14);
 	}
 }
 
@@ -292,14 +297,17 @@ enum State {
 	CardOnMouse,
 	GameOver,
 	GameOverLoss,
-	Start
+	Start,
+	Discard,
 }
 
 
 class World {
 	player_hand: Card[];
 	player_deck: Card[];
-	draw_pos: number;
+	discard: Card[];
+
+	cur_deck: Card[];
 
 	enemies: Map<number,Enemy>;
 	perm_cards: CardPerm[];
@@ -345,6 +353,8 @@ class World {
 	
 	constructor(){
 		this.player_hand = [];
+		this.cur_deck = [];
+		this.discard = [];
 		this.card_on_mouse = null;
 		this.maxhp = 20;
 		this.hp = 20;
@@ -352,7 +362,6 @@ class World {
 		this.max_energy = 1;
 		this.enemies = new Map();
 		this.player_deck = [];
-		this.draw_pos = 0;
 		this.cant_afford_text = -1;
 		this.cur_card_trigger_eot = 0;
 		this.s_e_d = null;
@@ -375,12 +384,17 @@ class World {
 		return new Card(card_def.name, card_def.energy_cost, card_def.description, card_def.actions, card_def.t_size);
 	}
 	draw_card() {
-		this.player_hand.push(this.player_deck[this.draw_pos]);
-		this.draw_pos += 1;
-		if (this.draw_pos >= this.player_deck.length) {
+		if (this.cur_deck.length > 0) {
+			this.player_hand.push(this.cur_deck.shift());
+		}else {
+			this.cur_deck = [...this.discard];
 			this.shuffle();
-			this.draw_pos = 0;
+			this.discard = [];
+			if (this.cur_deck.length > 0) {
+				this.player_hand.push(this.cur_deck.shift());
+			}
 		}
+
 	}
 	add_cards(cards: number) {
 		if (this.state == State.Targeting) {
@@ -403,6 +417,9 @@ class World {
 	}
 		
 	next_turn() {
+		if (this.player_hand.length > 6) {
+			this.state = State.Discard;
+		}
 		if (!(this.state == State.Playing)) return;
 		this.cur_card_trigger_eot = 0;
 		this.state = State.EndPhase;
@@ -411,8 +428,11 @@ class World {
 	}
 	next_level() {
 		additional_damage = 0;
+		this.cur_deck = [...this.player_deck];
+		this.discard = [];
 		for (let c of this.player_deck) {
 			c.energy_cost = c.base_energy_cost;
+			c.tracker = 0;
 		}
 		this.level += 1;
 		if (this.level >= LEVELS.length) {
@@ -425,21 +445,22 @@ class World {
 		this.turn = -1;
 		this.perm_cards = [];
 		this.player_hand = [];
-		this.draw_pos = 0;
 		this.shuffle();
 		this.hp = this.maxhp;
 	}
 	start() {
 		this.state = State.Playing;
-		this.add_cards(6);
+		this.add_cards(8);
 		this.level += 1;
 		this.max_energy = 0;
 		this.turn = -1;
 		this.perm_cards = [];
 		this.player_hand = [];
-		this.draw_pos = 0;
+		this.cur_deck = [...this.player_deck];
+		this.discard = [];
 		this.shuffle();
 		this.hp = this.maxhp;
+		LEVELS = START_LEVELS;
 	}
 	added_cards() {
 		if (this.card_adds_left > 0) {
@@ -447,6 +468,7 @@ class World {
 			this.cards_being_shown = selection(this, 3);
 			this.card_adds_left --;
 		}else {
+			this.cur_deck = [...this.player_deck];
 			this.state = State.Playing;
 			this.draw_card();
 			this.draw_card();
@@ -457,6 +479,7 @@ class World {
 		shuffle(this.player_deck);
 	}
 	update(){
+		if (this.state == State.Start) return;
 		if (this.hp <= 0) {
 			this.state = State.GameOverLoss;
 			return;
@@ -552,9 +575,54 @@ class World {
 					return;
 				}
 				console.log(this.turn, this.level);
+				let push_forward = [];
 				for (let enemy of LEVELS[this.level][this.turn]) {
-					world.enemies.set(cur_id + 1, new Enemy(Math.random() * 1000 + 300,100,((enemy[2] as EB[]).includes(EB.Big)) ? 85: 50,((enemy[2] as EB[]).includes(EB.Big)) ? 85: 50, enemy[1] as number, enemy[0] as number, enemy[2] as EB[]));
+					let new_enemy_x = Math.random() * 1000 + 300;
+					let conflict = false;
+					for (let enemy of world.enemies.values()) {
+						if (Math.sqrt(Math.pow(enemy.x - new_enemy_x,2) + Math.pow(enemy.y - 100, 2)) < 80) {
+							conflict = true;
+							break;
+						}
+					}
+					let tries = 0;
+					let fail = false;
+					while (conflict && tries < 10) {
+						tries ++;
+						new_enemy_x = Math.random() * 1000 + 300;
+						conflict = false;
+						for (let enemy of world.enemies.values()) {
+							if (Math.sqrt(Math.pow(enemy.x - new_enemy_x,2) + Math.pow(enemy.y - 100, 2)) < 80) {
+								conflict = true;
+								if (tries == 9) {
+									fail = true;
+								}
+								break;
+							}
+						}
+					}
+					if (!fail) {
+					world.enemies.set(cur_id + 1, new Enemy(new_enemy_x,100,((enemy[2] as EB[]).includes(EB.Big)) ? 85: 50,((enemy[2] as EB[]).includes(EB.Big)) ? 85: 50, enemy[1] as number, enemy[0] as number, enemy[2] as EB[]));
 					cur_id += 1;
+					}else {
+						push_forward.push(LEVELS[this.level][this.turn].indexOf(enemy));
+					}
+				}
+
+				for (let element of push_forward) {
+					let e = LEVELS[this.level][this.turn][element];
+					console.log("PANDA", e);
+					if (LEVELS[this.level].length >= this.turn) {
+						LEVELS[this.level][this.turn + 1].push(e);
+					}else {
+						LEVELS[this.level].push([e]);
+					}
+				}
+				let offset = 0;
+				push_forward.sort();
+				for (let element of push_forward) {
+					LEVELS[this.level][this.turn].splice(element - offset, 1);
+					offset ++;
 				}
 
 			}
@@ -608,7 +676,7 @@ class Camera {
 			p5.text("You died...\n Click anywhere to restart", WIDTH/2, HEIGHT/2);
 			return;
 		}
-	if (world.state == State.Playing || world.state == State.InBetweenPhase || world.state == State.EndPhase || world.state == State.Targeting || world.state == State.CardOnMouse) {
+	if (world.state == State.Playing || world.state == State.InBetweenPhase || world.state == State.EndPhase || world.state == State.Targeting || world.state == State.CardOnMouse || world.state == State.Discard) {
 		p5.stroke(190);
 		p5.strokeWeight(3.5);
 		for (let x = 0; x < WIDTH; x+= 45) {
@@ -630,11 +698,22 @@ class Camera {
 		for (let enemy of world.enemies) {
 			enemy[1].render(p5);
 		}
+		p5.noStroke();
+		p5.fill(0);
+		p5.textSize(17);
+		if (world.discard.length > 0 && world.state != State.Discard) {
+			p5.text("Cards in Discard Pile: " + world.discard.length, 50 + CARD_WIDTH * 0.4, 580);
+			p5.image(cb, 50,600, CARD_WIDTH * 0.8, CARD_HEIGHT * 0.8);
+		}
+		if (world.cur_deck.length > 0 && world.state != State.Discard) {
+			p5.text("Cards left in Deck: " + world.cur_deck.length, WIDTH-50 - CARD_WIDTH * 0.4, 580);
+			p5.image(cb, WIDTH - 50 - CARD_WIDTH * 0.8,600, CARD_WIDTH * 0.8, CARD_HEIGHT * 0.8);
+		}
 
 		let hovered_card: number = null;
 		let total_width = Math.min(85 * world.player_hand.length, 900); // 180
 		let individual_width = total_width/world.player_hand.length; // 60
-		if (world.state == State.Playing) {
+		if (world.state == State.Playing || world.state == State.Discard) {
 			for (let i = 0; i < world.player_hand.length; i++) {
 				let x = (WIDTH-total_width-CARD_WIDTH)/2.0 + individual_width * i;
 				let w = CARD_WIDTH;
@@ -663,6 +742,7 @@ class Camera {
 
 
 		for (let i = world.player_hand.length - 1; i >= 0; i--) {
+			console.log(world.player_hand);
 			let card = world.player_hand[i];
 			let x = (WIDTH-total_width-CARD_WIDTH)/2.0 + individual_width * i;
 			if (!(i==hovered_card)) {
@@ -703,9 +783,29 @@ class Camera {
 		for (let i = 0; i < world.cur_energy; i++) {
 			p5.image(eb, 48 + (i%10) * 36.5,80 + 36.5 * Math.floor(i/10), 27, 27);
 		}
+		if (world.state == State.Discard) {
+			p5.noFill();
+			p5.stroke(255,0,0);
+			if (p5.mouseX > 130 && p5.mouseX < 330 && p5.mouseY > 500 && p5.mouseY < 700) {
+				p5.fill(255,0,0,70);
+			}
+			p5.strokeWeight(3);
+			p5.rect(130,500,200,200);
+			p5.noStroke();
+			p5.fill(255,0,0);
+			p5.textAlign(p5.CENTER);
+			p5.textSize(19);
+			p5.textStyle(p5.NORMAL);
+			p5.text("Drag cards here to\n discard them", 230, 600 - 19/2)
+			
+			p5.fill(0);
+			p5.textSize(26);
+			p5.textStyle(p5.BOLD);
+			p5.text("Please discard down to 6 cards to continue", WIDTH/2, 320)
+		}
 
 
-		if (world.state as State == State.CardOnMouse) {
+		if (world.state as State == State.CardOnMouse || (world.state == State.Discard && world.card_on_mouse != null)) {
 			world.card_on_mouse.card.render(p5, p5.mouseX + world.card_on_mouse.x_offset,p5.mouseY + world.card_on_mouse.y_offset, 1.3);
 		}
 		if (world.state as State == State.Targeting) {
@@ -1072,7 +1172,7 @@ const WIDTH: number = 1470;
 
 let world = new World();
 let camera = new Camera();
-const card_1 = new CardDef("Quickshot", 1, (ad: number) => {return "deal " + (1 + ad) +  " damage to target enemy"}, new CardActions(
+const card_1 = new CardDef("Quickshot", 0, (ad: number, _) => {return "deal " + (1 + ad) +  " damage to target enemy"}, new CardActions(
 	(world: World, card: CardOnMouse) => {
 		world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); 
 		console.log("TESTFG");
@@ -1082,10 +1182,11 @@ const card_1 = new CardDef("Quickshot", 1, (ad: number) => {return "deal " + (1 
 		world.enemies.get(card.targets_e[0]).hp -= 1 + additional_damage;
 		world.cur_energy -= card.card.energy_cost;
 		world.state = State.Playing;
+		world.discard.push(card.card);
 	}
 ));
 // 10
-const card_2 = new CardDef("Lightning Bolt", 3, (ad: number) => {return "deal " + (2 + ad) + " damage to up to 3 target enemies"}, new CardActions(
+const card_2 = new CardDef("Lightning Bolt", 3, (ad: number, _) => {return "deal " + (2 + ad) + " damage to up to 3 target enemies"}, new CardActions(
 	(world: World, card: CardOnMouse) => {
 		world.card_targeting = new CardTargeting(card.card, card.index, 3, true, false); 
 		console.log("TESTFG");
@@ -1097,10 +1198,11 @@ const card_2 = new CardDef("Lightning Bolt", 3, (ad: number) => {return "deal " 
 		}
 		world.cur_energy -= card.card.energy_cost;
 		world.state = State.Playing;
+		world.discard.push(card.card);
 	}
 ))
 // 8
-const card_3 = new CardDef("Smite", 4, (ad: number) => {return "deal " + (3 + ad) + " damage to up to 2 target enemies, draw a card"}, new CardActions(
+const card_3 = new CardDef("Smite", 4, (ad: number, _) => {return "deal " + (3 + ad) + " damage to up to 2 target enemies, draw a card"}, new CardActions(
 	(world: World, card: CardOnMouse) => {
 		world.card_targeting = new CardTargeting(card.card, card.index, 2, true, false); 
 		console.log("TESTFG");
@@ -1113,16 +1215,18 @@ const card_3 = new CardDef("Smite", 4, (ad: number) => {return "deal " + (3 + ad
 		world.draw_card();
 		world.cur_energy -= card.card.energy_cost;
 		world.state = State.Playing;
+		world.discard.push(card.card);
 	}
 ))
 // 7
-const card_4 = new CardDef("Overwhelming Wave", 4, (ad: number) => {return "deal " + (2 + ad) + " damage to to all enemies"}, new CardActions(
+const card_4 = new CardDef("Overwhelming Wave", 3, (ad: number, _) => {return "deal " + (2 + ad) + " damage to to all enemies"}, new CardActions(
 	(world: World, card: CardOnMouse) => {
 		for (let enemy of world.enemies) {
 			enemy[1].hp -= 2 + additional_damage;
 		}
 		world.cur_energy -= card.card.energy_cost;
 		world.state = State.Playing;
+		world.discard.push(card.card);
 		console.log(world.state);
 	}
 ))
@@ -1130,11 +1234,12 @@ const card_4 = new CardDef("Overwhelming Wave", 4, (ad: number) => {return "deal
 
 
 
-const card_5 = new CardDef("Fiery Inferno", 3, (ad: number) => {return "for the rest of the game, at the end of each turn, deal " + (2 + ad) + " damage to to all enemies, and take 2 damage"}, new CardActions(
+const card_5 = new CardDef("Fiery Inferno", 3, (ad: number, _) => {return "for the rest of the game, at the end of each turn, deal " + (2 + ad) + " damage to to all enemies, and take 2 damage"}, new CardActions(
 	(world: World, card: CardOnMouse) => {
 		world.perm_cards.push(new CardPerm(card.card));
 		world.cur_energy -= card.card.energy_cost;
 		world.state = State.Playing;
+		world.discard.push(card.card);
 		console.log(world.state);
 	},(_w,_c) => {},
 	(world: World, _card: CardPerm) => {
@@ -1146,7 +1251,7 @@ const card_5 = new CardDef("Fiery Inferno", 3, (ad: number) => {return "for the 
 	}
 ), 7)
 // 7
-const card_6 = new CardDef("Nature's Reclamation", 2, (_) => {return "remove a card on the battlefield, then, heal for 2."}, new CardActions(
+const card_6 = new CardDef("Nature's Reclamation", 2, (_a, _t) => {return "remove a card on the battlefield, then, heal for 2."}, new CardActions(
 	(world: World, card: CardOnMouse) => {
 		world.card_targeting = new CardTargeting(card.card, card.index, 1, false, true);
 		world.state = State.Targeting;
@@ -1156,11 +1261,12 @@ const card_6 = new CardDef("Nature's Reclamation", 2, (_) => {return "remove a c
 		world.perm_cards.splice(card.targets_c[0],1);
 		world.hp = Math.min(world.hp + 2, world.maxhp);
 		world.state = State.Playing;
+		world.discard.push(card.card);
 	},
 ))
 // 6
 
-const card_7 = new CardDef("FIREBALL", 0, (ad: number) => {
+const card_7 = new CardDef("FIREBALL", 0, (ad: number, _) => {
 
 	if (ad == 0 ) {return "Deal X damage evenly spread (rounded down) amoung any number of target enemies, where X is the 1.5 times the amount of energy you have left (rounded down). For each target beyond the first, decrease X by 1, X cannot be negative. Consume all of your energy.";}
 	else{ return "Deal X damage evenly spread (rounded down) + " + ad + " amoung any number of target enemies, where X is the 1.5 times the amount of energy you have left (rounded down). For each target beyond the first, decrease X by 1, X cannot be negative. Consume all of your energy.";}
@@ -1181,17 +1287,19 @@ const card_7 = new CardDef("FIREBALL", 0, (ad: number) => {
 		}
 		world.cur_energy = 0;
 		world.state = State.Playing;
+		world.discard.push(card.card);
 	}
 ), 5)
 // 8
 
 
-const card_8 = new CardDef("Healing Blessing", 2, (_) => {return "Heal for 3, then, draw a card."}, new CardActions(
+const card_8 = new CardDef("Healing Blessing", 2, (_a, _t) => {return "Heal for 3, then, draw a card."}, new CardActions(
 	(world: World, card: CardOnMouse) => {
 		world.cur_energy -= card.card.energy_cost;
 		world.hp = Math.min(world.hp + 3, world.maxhp);
 		world.draw_card();
 		world.state = State.Playing;
+		world.discard.push(card.card);
 	},
 	(_world: World, _card: CardTargeting) => {
 	}
@@ -1199,47 +1307,51 @@ const card_8 = new CardDef("Healing Blessing", 2, (_) => {return "Heal for 3, th
 
 // 8
 //
-const card_9 = new CardDef("Shattering Rock", 3, (ad: number) => {return "Deal " + (3 + ad) + " damage to target enemy, then add 3 Rock Splinters to your hand which deal " + (1 + ad) + " damage to target enemy for 0 energy."}, new CardActions(
+const card_9 = new CardDef("Shattering Rock", 3, (ad: number, _) => {return "Deal " + (2 + ad) + " damage to target enemy, then add 3 Rock Splinters to your hand which deal " + (1 + ad) + " damage to target enemy for 0 energy."}, new CardActions(
 	(world: World, card: CardOnMouse) => {
 		world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
 		world.state = State.Targeting;
-
 	},
 	(world: World, card: CardTargeting) => {
 		for (let target of card.targets_e) {
 			world.enemies.get(target).hp -= 3 + additional_damage;
 		}
-		world.player_hand.push(new Card("Rock Splinter", 0, (ad: number) => {return "deal " + (1 + ad) + " damage to target enemy"}, new CardActions( (world: World, card: CardOnMouse) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world: World, card: CardTargeting) => { for (let target of card.targets_e) { world.enemies.get(target).hp -= 1 + additional_damage; } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }))); 
-		world.player_hand.push(new Card("Rock Splinter", 0, (ad: number) => {return "deal " + (1 + ad) + " damage to target enemy"}, new CardActions( (world: World, card: CardOnMouse) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world: World, card: CardTargeting) => { for (let target of card.targets_e) { world.enemies.get(target).hp -= 1 + additional_damage; } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }))); 
-		world.player_hand.push(new Card("Rock Splinter", 0, (ad: number) => {return "deal " + (1 + ad) + " damage to target enemy"}, new CardActions( (world: World, card: CardOnMouse) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world: World, card: CardTargeting) => { for (let target of card.targets_e) { world.enemies.get(target).hp -= 1 + additional_damage; } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }))); 
+		world.player_hand.push(new Card("Rock Splinter", 0, (ad: number, _) => {return "deal " + (1 + ad) + " damage to target enemy"}, new CardActions( (world: World, card: CardOnMouse) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world: World, card: CardTargeting) => { for (let target of card.targets_e) { world.enemies.get(target).hp -= 1 + additional_damage; } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }))); 
+		world.player_hand.push(new Card("Rock Splinter", 0, (ad: number, _) => {return "deal " + (1 + ad) + " damage to target enemy"}, new CardActions( (world: World, card: CardOnMouse) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world: World, card: CardTargeting) => { for (let target of card.targets_e) { world.enemies.get(target).hp -= 1 + additional_damage; } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }))); 
+		world.player_hand.push(new Card("Rock Splinter", 0, (ad: number, _) => {return "deal " + (1 + ad) + " damage to target enemy"}, new CardActions( (world: World, card: CardOnMouse) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world: World, card: CardTargeting) => { for (let target of card.targets_e) { world.enemies.get(target).hp -= 1 + additional_damage; } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }))); 
 
 		world.cur_energy -= card.card.energy_cost; world.state = State.Playing;
+		world.discard.push(card.card);
 	}
 ), 7)
 
 // 9
 
-const card_10 = new CardDef("Supernova", 7, (_) => {return "Discard your hand, shuffle, then, for the rest of the level decrease the cost of energy cost cards in your deck by 2, energy cost cannot be negative."}, new CardActions(
+const card_10 = new CardDef("Supernova", 7, (_) => {return "Discard your hand, shuffle your discard pile into your deck, then, for the rest of the level decrease the cost of energy cost cards in your deck by 2, energy cost cannot be negative."}, new CardActions(
 	(world: World, card: CardOnMouse) => {
-		world.player_hand = [];
+		world.discard = [...world.discard,...world.player_hand];
+		world.cur_deck = [...world.discard];
+		world.discard = [];
 		world.cur_energy -= card.card.energy_cost;
 		world.shuffle();
-		for (let c of world.player_deck) {
+		for (let c of world.cur_deck) {
 			c.energy_cost = Math.max(c.energy_cost - 2, 0);
 		}
 		world.state = State.Playing;
+		world.discard.push(card.card);
 
 	},
 	(_world: World, _card: CardTargeting) => {}
 ), 6)
 // 5
-const card_11 = new CardDef("Blood Pact", 2, (_) => {return "Lose 2 life, then draw 2 cards"}, new CardActions(
+const card_11 = new CardDef("Blood Pact", 2, (_a, _t) => {return "Lose 2 life, then draw 2 cards"}, new CardActions(
 	(world: World, card: CardOnMouse) => {
 		world.draw_card();
 		world.draw_card();
 		world.hp -= 2;
 		world.cur_energy -= card.card.energy_cost;
 		world.state = State.Playing;
+		world.discard.push(card.card);
 
 	},
 	(_world: World, _card: CardTargeting) => {}
@@ -1247,26 +1359,47 @@ const card_11 = new CardDef("Blood Pact", 2, (_) => {return "Lose 2 life, then d
 let additional_damage = 0;
 // 8
 
-const card_12 = new CardDef("Arcane Power", 5, (_) => {return "For the rest of the level, each card that deals damage to enemies deals 1 more damage"}, new CardActions(
+const card_12 = new CardDef("Arcane Power", 5, (_a, _t) => {return "For the rest of the level, each card that deals damage to enemies deals 1 more damage"}, new CardActions(
 	(world: World, card: CardOnMouse) => {
 		additional_damage += 1;
 		world.cur_energy -= card.card.energy_cost;
 		world.state = State.Playing;
+		world.discard.push(card.card);
 
 	},
 	(_world: World, _card: CardTargeting) => {}
 ));
-const card_13 = new CardDef("Leyline", 5, (_) => {return "For the rest of the level, at the end of your turn, draw a card"}, new CardActions(
+const card_13 = new CardDef("Leyline", 5, (_a, _t) => {return "For the rest of the level, at the end of your turn, draw a card"}, new CardActions(
 	(world: World, card: CardOnMouse) => {
 		world.perm_cards.push(new CardPerm(card.card));
 		world.cur_energy -= card.card.energy_cost;
 		world.state = State.Playing;
+		world.discard.push(card.card);
 	},(_w,_c) => {},
 	(world: World, _card: CardPerm) => {
 		world.draw_card();
 		return true;
 	}
 ))
+
+// 7
+const card_14 = new CardDef("Relentless Crusade", 2, (ad, t) => {return "Deal " + (2 + ad + t * 2) + " damage to up to 2 target enemies, then for the rest of the level increase this card's damage by 2, and its mana cost by 2, put this card back on the top of your deck"}, new CardActions(
+	(world: World, card: CardOnMouse) => {
+		world.card_targeting = new CardTargeting(card.card, card.index, 2, true, false);
+		world.state = State.Targeting;
+	},
+	(world: World, card: CardTargeting) => {
+		for (let target of card.targets_e) {
+			world.enemies.get(target).hp -=  2 + additional_damage + card.card.tracker * 2;
+		}
+		card.card.tracker ++;
+		world.cur_energy -= card.card.energy_cost;
+		card.card.energy_cost += 2;
+		world.state = State.Playing;
+		world.cur_deck.unshift(card.card);
+		console.log(world.cur_deck);
+	}
+), 6.1);
 // 6
 let cur_id = 1;
 
@@ -1277,6 +1410,7 @@ let f1: P5.Image;
 let f2: P5.Image;
 let li: P5.Image;
 let ct: P5.Image;
+let cb: P5.Image;
 const sketch = (p5: P5) => { 
 	p5.preload = async function() {
 		cardimg = p5.loadImage("./img/card.png");
@@ -1286,6 +1420,7 @@ const sketch = (p5: P5) => {
 		f2 = p5.loadImage("./img/fire2.png");
 		li = p5.loadImage("./img/lightning.png");
 		ct = p5.loadImage("./img/top.png");
+		cb = p5.loadImage("./img/card_back.png");
 	}
 
 	p5.setup = function () {
@@ -1335,7 +1470,7 @@ const sketch = (p5: P5) => {
 		if (p5.mouseX > WIDTH-150 && p5.mouseX < WIDTH-31 && p5.mouseY > 23 && p5.mouseY < 63 && world.state == State.Playing) {
 			world.state = State.ShowingDeck;
 		}
-		if (world.state == State.Playing) {
+		if (world.state == State.Playing || world.state == State.Discard) {
 			let hovered_card: number = null;
 			let hcx = null;
 			let total_width = Math.min(85 * world.player_hand.length, 900); // 180
@@ -1363,7 +1498,9 @@ const sketch = (p5: P5) => {
 			}
 			if (hovered_card != null) {
 				world.card_on_mouse = new CardOnMouse(world.player_hand[hovered_card],hovered_card, hcx - p5.mouseX, CARD_Y - p5.mouseY);
-				world.state = State.CardOnMouse;
+				if (world.state != State.Discard) {
+					world.state = State.CardOnMouse;
+				};
 				console.log("RFG", world.card_on_mouse == null);
 				world.player_hand.splice(hovered_card,1);
 
@@ -1420,6 +1557,22 @@ const sketch = (p5: P5) => {
 				world.player_hand.splice(world.card_on_mouse.index, 0, world.card_on_mouse.card);
 				world.card_on_mouse = null;
 				world.state = State.Playing;
+			}
+		}
+			p5.rect(130,500,200,200);
+		if (world.state == State.Discard) {
+			if (p5.mouseX > 130 && p5.mouseX < 330 && p5.mouseY > 500 && p5.mouseY < 700 && world.card_on_mouse != null) {
+				world.discard.push(world.card_on_mouse.card);
+				world.card_on_mouse = null;
+				if (world.player_hand.length <= 6) {
+					world.state = State.Playing;
+					world.next_turn();
+				}
+			}else {
+				if (world.card_on_mouse != null) {
+					world.player_hand.splice(world.card_on_mouse.index, 0, world.card_on_mouse.card);
+					world.card_on_mouse = null;
+				}
 			}
 		}
 	}
