@@ -68,7 +68,7 @@ class CardDef {
     }
 }
 class Card {
-    constructor(name, energy_cost, description, actions, t_size, card_image) {
+    constructor(name, energy_cost, description, actions, t_size, card_image, discardable) {
         this.name = name;
         this.energy_cost = energy_cost;
         this.description = description;
@@ -77,6 +77,7 @@ class Card {
         this.card_image = card_image;
         this.base_energy_cost = energy_cost;
         this.tracker = 0;
+        this.discardable = (discardable != null) ? discardable : true;
     }
     desc() {
         return this.description(additional_damage, this.tracker);
@@ -530,7 +531,6 @@ class World {
                 if (this.turn >= LEVELS[this.level].length) {
                     return;
                 }
-                console.log(this.turn, this.level);
                 let push_forward = [];
                 for (let enemy of LEVELS[this.level][this.turn]) {
                     let new_enemy_x = Math.random() * 1000 + 300;
@@ -575,7 +575,6 @@ class World {
                 }
                 for (let element of push_forward) {
                     let e = LEVELS[this.level][this.turn][element];
-                    console.log("PANDA", e);
                     if (LEVELS[this.level].length >= this.turn) {
                         LEVELS[this.level][this.turn + 1].push(e);
                     }
@@ -614,7 +613,6 @@ class Camera {
         this.camera_y = 0;
     }
     render(p5, world) {
-        console.log(world.state);
         if (world.state == State.Start) {
             p5.textStyle(p5.BOLD);
             p5.textSize(40);
@@ -704,7 +702,6 @@ class Camera {
             }
             world.cur_hovered_card = hovered_card;
             for (let i = world.player_hand.length - 1; i >= 0; i--) {
-                console.log(world.player_hand);
                 let card = world.player_hand[i];
                 let x = (WIDTH - total_width - CARD_WIDTH) / 2.0 + individual_width * i;
                 if (!(i == hovered_card)) {
@@ -1214,7 +1211,6 @@ let world = new World();
 let camera = new Camera();
 const card_1 = new CardDef("Quickshot", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => {
     world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
-    console.log("TESTFG");
     world.state = State.Targeting;
 }, (world, card) => {
     world.enemies.get(card.targets_e[0]).hp -= 1 + additional_damage;
@@ -1225,7 +1221,6 @@ const card_1 = new CardDef("Quickshot", 0, (ad, _) => { return "deal " + (1 + ad
 // 10
 const card_2 = new CardDef("Lightning Bolt", 3, (ad, _) => { return "deal " + (2 + ad) + " damage to up to 3 target enemies"; }, new CardActions((world, card) => {
     world.card_targeting = new CardTargeting(card.card, card.index, 3, true, false);
-    console.log("TESTFG");
     world.state = State.Targeting;
 }, (world, card) => {
     for (let target of card.targets_e) {
@@ -1238,7 +1233,6 @@ const card_2 = new CardDef("Lightning Bolt", 3, (ad, _) => { return "deal " + (2
 // 8
 const card_3 = new CardDef("Smite", 4, (ad, _) => { return "deal " + (3 + ad) + " damage to up to 2 target enemies, draw a card"; }, new CardActions((world, card) => {
     world.card_targeting = new CardTargeting(card.card, card.index, 2, true, false);
-    console.log("TESTFG");
     world.state = State.Targeting;
 }, (world, card) => {
     for (let target of card.targets_e) {
@@ -1257,7 +1251,6 @@ const card_4 = new CardDef("Overwhelming Wave", 3, (ad, _) => { return "deal " +
     world.cur_energy -= card.card.energy_cost;
     world.state = State.Playing;
     world.discard.push(card.card);
-    console.log(world.state);
 }));
 // 8
 const card_5 = new CardDef("Fiery Inferno", 3, (ad, _) => { return "for the rest of the game, at the end of each turn, deal " + (2 + ad) + " damage to to all enemies, and take 2 damage"; }, new CardActions((world, card) => {
@@ -1265,7 +1258,6 @@ const card_5 = new CardDef("Fiery Inferno", 3, (ad, _) => { return "for the rest
     world.cur_energy -= card.card.energy_cost;
     world.state = State.Playing;
     world.discard.push(card.card);
-    console.log(world.state);
 }, (_w, _c) => { }, (world, _card) => {
     for (let enemy of world.enemies) {
         enemy[1].hp -= 2 + additional_damage;
@@ -1277,7 +1269,6 @@ const card_5 = new CardDef("Fiery Inferno", 3, (ad, _) => { return "for the rest
 const card_6 = new CardDef("Nature's Reclamation", 2, (_a, _t) => { return "remove a card on the battlefield, then, heal for 2."; }, new CardActions((world, card) => {
     world.card_targeting = new CardTargeting(card.card, card.index, 1, false, true);
     world.state = State.Targeting;
-    console.log(world.state);
 }, (world, card) => {
     world.perm_cards.splice(card.targets_c[0], 1);
     world.hp = Math.min(world.hp + 2, world.maxhp);
@@ -1322,17 +1313,18 @@ const card_9 = new CardDef("Shattering Rock", 3, (ad, _) => { return "Deal " + (
     world.state = State.Targeting;
 }, (world, card) => {
     for (let target of card.targets_e) {
-        world.enemies.get(target).hp -= 3 + additional_damage;
+        world.enemies.get(target).hp -= 2 + additional_damage;
     }
     world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { for (let target of card.targets_e) {
         world.enemies.get(target).hp -= 1 + additional_damage;
-    } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; })));
+    } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, null, false));
     world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { for (let target of card.targets_e) {
         world.enemies.get(target).hp -= 1 + additional_damage;
-    } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; })));
+    } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, null, false));
     world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { for (let target of card.targets_e) {
         world.enemies.get(target).hp -= 1 + additional_damage;
-    } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; })));
+    } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, null, false));
+    console.log(world.player_hand);
     world.cur_energy -= card.card.energy_cost;
     world.state = State.Playing;
     world.discard.push(card.card);
@@ -1389,7 +1381,6 @@ const card_14 = new CardDef("Relentless Crusade", 2, (ad, t) => { return "Deal "
     card.card.energy_cost += 2;
     world.state = State.Playing;
     world.cur_deck.unshift(card.card);
-    console.log(world.cur_deck);
 }), 6.1);
 // 6
 let cur_id = 1;
@@ -1451,7 +1442,6 @@ const sketch = (p5) => {
         }
         if (world.state == State.AddingCards) {
             if (p5.mouseX >= 350 + 13.88 && p5.mouseX <= 350 + 13.88 + 1.17 * CARD_WIDTH && p5.mouseY >= 310 && p5.mouseY <= 310 + 1.25 * CARD_HEIGHT && world.clicked_added_card != 0) {
-                console.log("TEST");
                 world.clicked_added_card = 0;
             }
             if (p5.mouseX >= 650 + 13.88 && p5.mouseX <= 650 + 13.88 + 1.17 * CARD_WIDTH && p5.mouseY >= 310 && p5.mouseY <= 310 + 1.25 * CARD_HEIGHT && world.clicked_added_card != 1) {
@@ -1500,7 +1490,6 @@ const sketch = (p5) => {
                     world.state = State.CardOnMouse;
                 }
                 ;
-                console.log("RFG", world.card_on_mouse == null);
                 world.player_hand.splice(hovered_card, 1);
             }
         }
@@ -1562,7 +1551,9 @@ const sketch = (p5) => {
         p5.rect(130, 500, 200, 200);
         if (world.state == State.Discard) {
             if (p5.mouseX > 130 && p5.mouseX < 330 && p5.mouseY > 500 && p5.mouseY < 700 && world.card_on_mouse != null) {
-                world.discard.push(world.card_on_mouse.card);
+                if (world.card_on_mouse.card.discardable) {
+                    world.discard.push(world.card_on_mouse.card);
+                }
                 world.card_on_mouse = null;
                 if (world.player_hand.length <= 6) {
                     world.state = State.Playing;
