@@ -202,6 +202,7 @@ class Enemy {
 		this.tags = eb;
 	}
 	render(p5: P5) {
+		p5.textAlign(p5.CENTER);
 		p5.textStyle(p5.NORMAL);
 		p5.stroke("black");
 		p5.strokeWeight(3);
@@ -350,6 +351,10 @@ class World {
 
 	state: State;
 
+	/* TUTORAL */
+	tutorial: boolean;
+	tutorial_stage: number;
+
 	
 	constructor(){
 		this.player_hand = [];
@@ -376,6 +381,8 @@ class World {
 		this.state = State.Start;
 		this.card_adds_left = -1;
 		this.total_card_adds = 0;
+		this.tutorial = true;
+		this.tutorial_stage = 0;
 	}
 	add_card_to_deck(card_def: CardDef) {
 		this.player_deck.push(new Card(card_def.name, card_def.energy_cost, card_def.description, card_def.actions, card_def.t_size));
@@ -417,6 +424,9 @@ class World {
 	}
 		
 	next_turn() {
+		if (world.tutorial && (world.tutorial_stage == 8 )) {
+			world.tutorial_stage ++;
+		};
 		if (this.player_hand.length > 6) {
 			this.state = State.Discard;
 		}
@@ -451,7 +461,8 @@ class World {
 	start() {
 		this.state = State.Playing;
 		this.add_cards(8);
-		this.level += 1;
+		this.tutorial = false;
+		this.level = 0;
 		this.max_energy = 0;
 		this.turn = -1;
 		this.perm_cards = [];
@@ -462,6 +473,33 @@ class World {
 		this.hp = this.maxhp;
 		LEVELS = START_LEVELS;
 	}
+	start_tutorial() {
+		this.state = State.Playing;
+		this.tutorial = true;
+		this.tutorial_stage = 0;
+		this.level = 0;
+		this.max_energy = 0;
+		this.turn = -1;
+		this.perm_cards = [];
+		this.player_hand = [
+		];
+		this.cur_deck = [
+			world.make_card(card_1),
+			world.make_card(card_12),
+			world.make_card(card_1)
+		];
+		this.discard = [];
+		this.shuffle();
+		this.hp = this.maxhp;
+		LEVELS = [
+			[
+				[[2,1,[]]],
+				[[2,1,[EB.Speedy]]]
+			]
+		];
+		this.next_turn();
+	}
+
 	added_cards() {
 		if (this.card_adds_left > 0) {
 			this.clicked_added_card = null;
@@ -568,6 +606,9 @@ class World {
 				this.max_energy += 1;
 				this.cur_energy = this.max_energy;
 				this.turn += 1;
+				if (world.tutorial_stage == 10) {
+					world.tutorial_stage ++;
+				}
 				if (this.level >= LEVELS.length) {
 					return;
 				}
@@ -602,7 +643,16 @@ class World {
 						}
 					}
 					if (!fail) {
+						if (world.tutorial && world.tutorial_stage < 4) {
+
+						world.enemies.set(cur_id + 1, new Enemy(900,100,((enemy[2] as EB[]).includes(EB.Big)) ? 85: 50,((enemy[2] as EB[]).includes(EB.Big)) ? 85: 50, enemy[1] as number, enemy[0] as number, enemy[2] as EB[]));
+						}else if (world.tutorial){
+						world.enemies.set(cur_id + 1, new Enemy(600,100,((enemy[2] as EB[]).includes(EB.Big)) ? 85: 50,((enemy[2] as EB[]).includes(EB.Big)) ? 85: 50, enemy[1] as number, enemy[0] as number, enemy[2] as EB[]));
+
+						}
+						else {
 					world.enemies.set(cur_id + 1, new Enemy(new_enemy_x,100,((enemy[2] as EB[]).includes(EB.Big)) ? 85: 50,((enemy[2] as EB[]).includes(EB.Big)) ? 85: 50, enemy[1] as number, enemy[0] as number, enemy[2] as EB[]));
+						}
 					cur_id += 1;
 					}else {
 						push_forward.push(LEVELS[this.level][this.turn].indexOf(enemy));
@@ -632,6 +682,8 @@ class World {
 		for (let enemy of this.enemies) {
 			if (enemy[1].hp <= 0) {
 				this.enemies.delete(enemy[0]);
+				if (world.tutorial_stage == 4) {world.tutorial_stage ++}
+				if (world.tutorial_stage == 12) {world.tutorial = false; world.tutorial_stage = 100; world.start();}
 			}
 		}
 		}
@@ -1122,6 +1174,140 @@ class Camera {
 			p5.text("X", WIDTH - 50, 50);
 		}
 
+		if (world.tutorial_stage == 0 && world.tutorial) {
+			p5.fill(60,60,60,185);
+			p5.noStroke();
+			p5.rect(0,0,WIDTH,23);
+			p5.rect(0,84,WIDTH,HEIGHT-84);
+			p5.rect(0,23,42,61);
+			p5.rect(415,23,WIDTH-415,61);
+			p5.fill(255);
+			p5.textStyle(p5.NORMAL);
+			p5.textSize(19);
+			p5.textAlign(p5.LEFT);
+			p5.text("This is your health bar, keep\nyour health above 0, otherwise\nyou'll lose.\n\nClick anywhere to continue...", 340, 140);
+			p5.textAlign(p5.CENTER);
+		}
+
+		if (world.tutorial_stage == 1 && world.tutorial) {
+			p5.fill(60,60,60,185);
+			p5.noStroke();
+			p5.rect(0,0,WIDTH,75);
+			p5.rect(0,110,WIDTH,HEIGHT-110);
+			p5.rect(0,75,42,35);
+			p5.rect(410,75,WIDTH-410,35);
+			p5.fill(255);
+			p5.textStyle(p5.NORMAL);
+			p5.textSize(19);
+			p5.textAlign(p5.LEFT);
+			p5.text("This is your energy, you spend it to play cards.\n\nAt the start of each turn,you'll gain energy equal to the turn you are on,\nso on your first turn, you gain 1 energy, on your second, 2 energy etc.\nAt the end of each turn you'll lose any remaining energy\n\nClick anywhere to continue...", 340, 192);
+			p5.textAlign(p5.CENTER);
+		}
+		if (world.tutorial_stage == 2 && world.tutorial) {
+			p5.fill(60,60,60,185);
+			p5.noStroke();
+			p5.rect(0,0,WIDTH, 60);
+			p5.rect(0,160,WIDTH, HEIGHT - 160);
+			p5.rect(0,60,860, 100);
+			p5.rect(990,60,WIDTH-990, 100);
+
+			p5.fill(255);
+			p5.textStyle(p5.NORMAL);
+			p5.textSize(19);
+			p5.textAlign(p5.LEFT);
+			p5.text("This is an enemy.\nAt the top is its health bar, get its health down to 0 to kill it.\nAt the end of each turn, the enemy will move forward one line.\nWhen you end a turn while the enemy is on the red line,\nit will attack you, dealing damage equal to the big number inside it.\n\nClick anywhere to continue...", 800, 210);
+			p5.textAlign(p5.CENTER);
+		}
+
+		if (world.tutorial_stage == 3 && world.tutorial) {
+			p5.fill(60,60,60,185);
+			p5.noStroke();
+			p5.rect(0,0,WIDTH, 584);
+			p5.rect(0,584,600, 210);
+			p5.rect(790,584,WIDTH-790, 210);
+			p5.rect(0,794,WIDTH, HEIGHT-794);
+
+			p5.fill(255);
+			p5.textStyle(p5.NORMAL);
+			p5.textSize(19);
+			p5.textAlign(p5.LEFT);
+			p5.text("This is a card.\nThe number in the top right is its energy cost.\nYou must pay this amount of energy in order to play the card.\nUnder that is the effect of the card, this is what it will do when played\n\nIn order to play a card, click and drag it to the top portion of the screen.\nYou may then need to target enemies, to do this, simply click on the enemies.\nFor cards that target a variable number of enemies, you may need to click\nConfirm Targets in the bottom left corner\n\nTry using Quickshot to kill the enemy.\n\nClick anywhere to continue...", 816, 520);
+			p5.textAlign(p5.CENTER);
+		}
+
+		if (world.tutorial_stage == 5 && world.tutorial) {
+			p5.fill(60,60,60,185);
+			p5.noStroke();
+			p5.rect(0,0,WIDTH, 540);
+			p5.rect(0,775,WIDTH, HEIGHT-775);
+			p5.rect(210,540,WIDTH-210, 235);
+
+			p5.fill(255);
+			p5.textStyle(p5.NORMAL);
+			p5.textSize(19);
+			p5.textAlign(p5.LEFT);
+			p5.text("This is your Discard Pile. \nYour cards will go here after being played.\n\nClick anywhere to continue...", 270, 500);
+			p5.textAlign(p5.CENTER);
+		}
+		if (world.tutorial_stage == 6 && world.tutorial) {
+			p5.fill(60,60,60,185);
+			p5.noStroke();
+			p5.rect(0,0,WIDTH, 540);
+			p5.rect(0,775,WIDTH, HEIGHT-775);
+			p5.rect(0,540,1250, 235);
+
+			p5.fill(255);
+			p5.textStyle(p5.NORMAL);
+			p5.textSize(19);
+			p5.textAlign(p5.RIGHT);
+			p5.text("This is your Deck. \nCards drawn will come from here.\nIf there are no cards in your deck and you try to draw a card, your discard pile will first be shuffled into your deck\nIf both your discard pile and your deck have no cards, you will not draw a card.\n\nClick anywhere to continue...", 1200, 500);
+			p5.textAlign(p5.CENTER);
+		}
+		if (world.tutorial_stage == 7 && world.tutorial) {
+			// 870 500
+			p5.fill(60,60,60,185);
+			p5.noStroke();
+			p5.rect(0,0,WIDTH, 500);
+			p5.rect(0,590,WIDTH, HEIGHT-590);
+			p5.rect(0,500,877,90);
+			p5.rect(1020, 500, WIDTH-1020, 90);
+
+			p5.fill(255);
+			p5.textStyle(p5.NORMAL);
+			p5.textSize(19);
+			p5.textAlign(p5.LEFT);
+			p5.text("This is where you end your turn. \nEnding your turn will advance the enemies,\nreplenish your energy and draw you a card\n\nSince you have nothing else to do, try ending\nyour turn.\n\nClick anywhere to continue...", 1050, 460);
+			p5.textAlign(p5.CENTER);
+		}
+
+		if (world.tutorial_stage == 9 && world.tutorial) {
+			p5.fill(60,60,60,185);
+			p5.noStroke();
+			p5.rect(0,0,WIDTH, 60);
+			p5.rect(0,160,WIDTH, HEIGHT - 160);
+
+			p5.rect(0,60,560, 100);
+			p5.rect(690,60,WIDTH-690, 100);
+
+			p5.fill(255);
+			p5.textStyle(p5.NORMAL);
+			p5.textSize(19);
+			p5.textAlign(p5.LEFT);
+			p5.text("This is a speedy enemy as indicated by its green color.\nSpeedy enemies move two spaces forward each turn instead of one.\n\nSince you don't have enough energy to play any of your cards,\ntry ending your turn again.\n\nClick anywhere to continue...", 760, 200);
+			p5.textAlign(p5.CENTER);
+		}
+		if (world.tutorial_stage == 11 && world.tutorial) {
+			p5.fill(60,60,60,185);
+			p5.noStroke();
+			p5.rect(0,0,WIDTH, HEIGHT);
+
+			p5.fill(255);
+			p5.textStyle(p5.NORMAL);
+			p5.textSize(19);
+			p5.textAlign(p5.LEFT);
+			p5.text("Now kill this enemy and you'll have completed the tutorial! \n\nClick anywhere to continue...", 760, 400);
+			p5.textAlign(p5.CENTER);
+		}
 
 	}
 }
@@ -1402,6 +1588,7 @@ const card_14 = new CardDef("Relentless Crusade", 2, (ad, t) => {return "Deal " 
 ), 6.1);
 // 6
 let cur_id = 1;
+let tutorial_complete = false;
 
 let cardimg: P5.Image;
 let hpb: P5.Image;
@@ -1435,17 +1622,26 @@ const sketch = (p5: P5) => {
 	p5.mousePressed = function() {
 		if (world.state == State.GameOver || world.state == State.GameOverLoss) {
 			world = new World();
+			tutorial_complete = true;
 		}
 		if (world.state == State.Start) {
 			world.level = -1;
 			world.shuffle();
-			world.start();
+			if (!tutorial_complete) {
+				world.start_tutorial();
+			}else {
+				world.start();
+			}
 			return;
 		}
 		if (world.state == State.ShowingDeck) {
 			if (p5.mouseX > WIDTH-70 && p5.mouseX < WIDTH-31 && p5.mouseY > 23 && p5.mouseY < 63) {
 				world.state = State.Playing;
 			}
+			return;
+		}
+		if (world.tutorial && world.tutorial_stage != 4 && world.tutorial_stage != 8 && world.tutorial_stage != 10 && world.tutorial_stage != 12) {
+			world.tutorial_stage ++;
 			return;
 		}
 		if (world.state == State.AddingCards) {
@@ -1463,11 +1659,9 @@ const sketch = (p5: P5) => {
 				world.player_deck.push(world.cards_being_shown[world.clicked_added_card]);
 				world.added_cards();
 			}
-
-
 			return;
 		}
-		if (p5.mouseX > WIDTH-150 && p5.mouseX < WIDTH-31 && p5.mouseY > 23 && p5.mouseY < 63 && world.state == State.Playing) {
+		if (p5.mouseX > WIDTH-150 && p5.mouseX < WIDTH-31 && p5.mouseY > 23 && p5.mouseY < 63 && world.state == State.Playing && world.tutorial_stage != 4 && world.tutorial_stage != 8 && world.tutorial_stage != 10 && world.tutorial_stage != 12) {
 			world.state = State.ShowingDeck;
 		}
 		if (world.state == State.Playing || world.state == State.Discard) {
@@ -1496,7 +1690,7 @@ const sketch = (p5: P5) => {
 					break;
 				}
 			}
-			if (hovered_card != null) {
+			if (hovered_card != null && world.tutorial_stage != 8) {
 				world.card_on_mouse = new CardOnMouse(world.player_hand[hovered_card],hovered_card, hcx - p5.mouseX, CARD_Y - p5.mouseY);
 				if (world.state != State.Discard) {
 					world.state = State.CardOnMouse;
@@ -1506,7 +1700,7 @@ const sketch = (p5: P5) => {
 
 			}
 		}
-		if (p5.mouseX > 900 && p5.mouseX < 1000 && p5.mouseY > CARD_Y - 80 && p5.mouseY < CARD_Y - 30 && world.state == State.Playing) {
+		if (p5.mouseX > 900 && p5.mouseX < 1000 && p5.mouseY > CARD_Y - 80 && p5.mouseY < CARD_Y - 30 && world.state == State.Playing && world.tutorial_stage != 4 && world.tutorial_stage != 12) {
 			world.next_turn();
 		}
 		if (world.card_targeting != null && world.cur_hovered_enemy != null && world.card_targeting.targets_enemies) {
