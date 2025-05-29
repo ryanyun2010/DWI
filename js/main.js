@@ -1499,10 +1499,12 @@ const card_15 = new CardDef("Force Push", 2, (_a, _t) => { return "Move all enem
 }, (_world, _card) => {
 }), null, CardImage.Crusade, CardColor.White);
 const card_16 = new CardDef("Renewal", 2, (_a, _t) => { return "A random card from your discard pile is put in your hand, its energy cost becomes 0 until you play it."; }, new CardActions((world, card) => {
-    let random = Math.max(Math.floor(Math.random() * world.discard.length - 0.001), 0);
-    world.player_hand.push(world.discard[random]);
-    world.discard.splice(random, 1);
-    world.player_hand[world.player_hand.length - 1].energy_cost = 0;
+    if (world.discard.length > 0) {
+        let random = Math.max(Math.floor(Math.random() * world.discard.length - 0.001), 0);
+        world.player_hand.push(world.discard[random]);
+        world.discard.splice(random, 1);
+        world.player_hand[world.player_hand.length - 1].energy_cost = 0;
+    }
     world.cur_energy -= card.card.energy_cost;
     world.state = State.Playing;
     world.discard.push(card.card);
