@@ -117,6 +117,7 @@ class Card {
 	t_size: number;
 	card_image: CardImage;
 	base_energy_cost: number;
+	p_energy_cost: number;
 	tracker: number;
 	discardable: boolean;
 	card_color: CardColor;
@@ -131,6 +132,7 @@ class Card {
 		this.tracker = 0;
 		this.discardable = (discardable != null) ? discardable : true;
 		this.card_color = (card_color != null)? card_color: CardColor.Blue;
+		this.p_energy_cost = energy_cost;
 	}
 	desc() {
 		return this.description(additional_damage, this.tracker);
@@ -338,36 +340,38 @@ function selection(world: World, num: number): Card[] {
 
 function select(world: World): Card {
 	let r = Math.random();
-	if (r < 10/111) {
+	if (r < 10/118) {
 		return world.make_card(card_1);
-	} else if (r < 18/111) {
+	} else if (r < 18/118) {
 		return world.make_card(card_2);
-	} else if (r < 25/111) {
+	} else if (r < 25/118) {
 		return world.make_card(card_3);
-	} else if (r < 33/111) {
+	} else if (r < 33/118) {
 		return world.make_card(card_4);
-	} else if (r < 40/111) {
+	} else if (r < 40/118) {
 		return world.make_card(card_5);
-	} else if (r < 46/111) {
+	} else if (r < 46/118) {
 		return world.make_card(card_6);
-	} else if (r < 54/111){
+	} else if (r < 54/118){
 		return world.make_card(card_7);
-	} else if (r < 62/111){
+	} else if (r < 62/118){
 		return world.make_card(card_8);
-	} else if (r < 71/111) {
+	} else if (r < 71/118) {
 		return world.make_card(card_9);
-	} else if (r < 77/111) {
+	} else if (r < 77/118) {
 		return world.make_card(card_10);
-	} else if (r < 82/111) {
+	} else if (r < 82/118) {
 		return world.make_card(card_11);
-	} else if (r < 90/111){
+	} else if (r < 90/118){
 		return world.make_card(card_12);
-	} else if (r < 96/111){
+	} else if (r < 96/118){
 		return world.make_card(card_13);
-	} else if (r < 104/111){
+	} else if (r < 104/118){
 		return world.make_card(card_14);
-	} else {
+	} else if (r < 111/118){
 		return world.make_card(card_15);
+	} else {
+		return world.make_card(card_16);
 	}
 }
 
@@ -647,8 +651,8 @@ class World {
 				let e = this.s_e_d.get(enemy[0]);
 				if (e.y < 420) {
 					if (enemy[1].tags.includes(EB.Speedy)) {
-						if (enemy[1].y >= e.y + 160) {
-							enemy[1].y = e.y + 160;
+						if (enemy[1].y >= Math.min(e.y + 160, 420)) {
+							enemy[1].y = Math.min(e.y + 160, 420);
 						}else {
 							enemy[1].y += 4;
 							something_happened = true;
@@ -1449,6 +1453,7 @@ const card_1 = new CardDef("Quickshot", 0, (ad: number, _) => {return "deal " + 
 		world.enemies.get(card.targets_e[0]).hp -= 1 + additional_damage;
 		world.cur_energy -= card.card.energy_cost;
 		world.state = State.Playing;
+		card.card.energy_cost = card.card.p_energy_cost;
 		world.discard.push(card.card);
 	}
 ));
@@ -1463,6 +1468,7 @@ const card_2 = new CardDef("Lightning Bolt", 3, (ad: number, _) => {return "deal
 			world.enemies.get(target).hp -= 2 + additional_damage;
 		}
 		world.cur_energy -= card.card.energy_cost;
+		card.card.energy_cost = card.card.p_energy_cost;
 		world.state = State.Playing;
 		world.discard.push(card.card);
 	}
@@ -1480,6 +1486,7 @@ const card_3 = new CardDef("Smite", 4, (ad: number, _) => {return "deal " + (3 +
 		world.draw_card();
 		world.cur_energy -= card.card.energy_cost;
 		world.state = State.Playing;
+		card.card.energy_cost = card.card.p_energy_cost;
 		world.discard.push(card.card);
 	}
 ))
@@ -1491,6 +1498,7 @@ const card_4 = new CardDef("Overwhelming Wave", 3, (ad: number, _) => {return "d
 		}
 		world.cur_energy -= card.card.energy_cost;
 		world.state = State.Playing;
+		card.card.energy_cost = card.card.p_energy_cost;
 		world.discard.push(card.card);
 	}
 ))
@@ -1503,6 +1511,7 @@ const card_5 = new CardDef("Fiery Inferno", 3, (ad: number, _) => {return "for t
 		world.perm_cards.push(new CardPerm(card.card));
 		world.cur_energy -= card.card.energy_cost;
 		world.state = State.Playing;
+		card.card.energy_cost = card.card.p_energy_cost;
 		world.discard.push(card.card);
 	},(_w,_c) => {},
 	(world: World, _card: CardPerm) => {
@@ -1523,6 +1532,7 @@ const card_6 = new CardDef("Nature's Reclamation", 2, (_a, _t) => {return "remov
 		world.perm_cards.splice(card.targets_c[0],1);
 		world.hp = Math.min(world.hp + 2, world.maxhp);
 		world.state = State.Playing;
+		card.card.energy_cost = card.card.p_energy_cost;
 		world.discard.push(card.card);
 	},
 ))
@@ -1549,6 +1559,7 @@ const card_7 = new CardDef("FIREBALL", 0, (ad: number, _) => {
 		}
 		world.cur_energy = 0;
 		world.state = State.Playing;
+		card.card.energy_cost = card.card.p_energy_cost;
 		world.discard.push(card.card);
 	}
 ), 5, CardImage.Fireball1, CardColor.Red)
@@ -1561,6 +1572,7 @@ const card_8 = new CardDef("Healing Blessing", 2, (_a, _t) => {return "Heal for 
 		world.hp = Math.min(world.hp + 3, world.maxhp);
 		world.draw_card();
 		world.state = State.Playing;
+		card.card.energy_cost = card.card.p_energy_cost;
 		world.discard.push(card.card);
 	},
 	(_world: World, _card: CardTargeting) => {
@@ -1583,6 +1595,7 @@ const card_9 = new CardDef("Shattering Rock", 3, (ad: number, _) => {return "Dea
 		world.player_hand.push(new Card("Rock Splinter", 0, (ad: number, _) => {return "deal " + (1 + ad) + " damage to target enemy"}, new CardActions( (world: World, card: CardOnMouse) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world: World, card: CardTargeting) => { for (let target of card.targets_e) { world.enemies.get(target).hp -= 1 + additional_damage; } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }),null,CardImage.Rock,CardColor.Green,false)); 
 		console.log(world.player_hand);
 		world.cur_energy -= card.card.energy_cost; world.state = State.Playing;
+		card.card.energy_cost = card.card.p_energy_cost;
 		world.discard.push(card.card);
 	}
 ), 7, CardImage.Rock, CardColor.Green)
@@ -1599,8 +1612,10 @@ const card_10 = new CardDef("Supernova", 7, (_) => {return "Discard your hand, s
 		world.shuffle();
 		for (let c of world.cur_deck) {
 			c.energy_cost = Math.max(c.energy_cost - 2, 0);
+			c.p_energy_cost = Math.max(c.p_energy_cost - 2, 0);
 		}
 		world.state = State.Playing;
+		card.card.energy_cost = card.card.p_energy_cost;
 		world.discard.push(card.card);
 
 	},
@@ -1614,6 +1629,7 @@ const card_11 = new CardDef("Blood Pact", 2, (_a, _t) => {return "Lose 2 life, t
 		world.hp -= 2;
 		world.cur_energy -= card.card.energy_cost;
 		world.state = State.Playing;
+		card.card.energy_cost = card.card.p_energy_cost;
 		world.discard.push(card.card);
 
 	},
@@ -1637,6 +1653,7 @@ const card_13 = new CardDef("Leyline", 5, (_a, _t) => {return "For the rest of t
 		world.perm_cards.push(new CardPerm(card.card));
 		world.cur_energy -= card.card.energy_cost;
 		world.state = State.Playing;
+		card.card.energy_cost = card.card.p_energy_cost;
 		world.discard.push(card.card);
 	},(_w,_c) => {},
 	(world: World, _card: CardPerm) => {
@@ -1659,6 +1676,7 @@ const card_14 = new CardDef("Relentless Crusade", 2, (ad, t) => {return "Deal " 
 		world.cur_energy -= card.card.energy_cost;
 		card.card.energy_cost += 2;
 		world.state = State.Playing;
+		card.card.energy_cost = card.card.p_energy_cost;
 		world.cur_deck.unshift(card.card);
 	}
 ), 6.1, CardImage.Crusade, CardColor.White);
@@ -1670,10 +1688,27 @@ const card_15 = new CardDef("Force Push", 2, (_a,_t) => {return "Move all enemie
 		}
 		world.cur_energy -= card.card.energy_cost;
 		world.state = State.Playing;
+		card.card.energy_cost = card.card.p_energy_cost;
+		world.discard.push(card.card);
 	},
 	(_world: World, _card: CardTargeting) => {
 	}
 ), null,  CardImage.Crusade, CardColor.White);
+
+
+const card_16 = new CardDef("Renewal", 2, (_a,_t) => {return "A random card from your discard pile is put in your hand, its energy cost becomes 0 until you play it."}, new CardActions(
+	(world: World, card: CardOnMouse) => {
+		let random = Math.max(Math.floor(Math.random() * world.discard.length - 0.001),0)
+		world.player_hand.push(world.discard[random]);
+		world.discard.splice(random,1);
+		world.player_hand[world.player_hand.length - 1].energy_cost = 0;
+		world.cur_energy -= card.card.energy_cost;
+		world.state = State.Playing;
+		world.discard.push(card.card);
+	},
+	(_world: World, _card: CardTargeting) => {
+	}
+), 8.2,  CardImage.Lightning, CardColor.Blue);
 let cur_id = 1;
 let tutorial_complete = false;
 
