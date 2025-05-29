@@ -1466,7 +1466,7 @@ const card_14 = new CardDef("Relentless Crusade", 2, (ad, t) => { return "Deal "
     world.cur_deck.unshift(card.card);
 }), 6.1, CardImage.Crusade, CardColor.White);
 // 6
-const card_15 = new CardDef("Force Push", 3, (_a, _t) => { return "Move all enemies one space back"; }, new CardActions((world, card) => {
+const card_15 = new CardDef("Force Push", 2, (_a, _t) => { return "Move all enemies one space back"; }, new CardActions((world, card) => {
     for (let target of world.enemies) {
         target[1].y = Math.max(target[1].y - 80, 100);
     }
