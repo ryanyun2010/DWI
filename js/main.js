@@ -1403,22 +1403,24 @@ const card_8 = new CardDef("Healing Blessing", 2, (_a, _t) => { return "Heal for
 }));
 // 8
 //
-const card_9 = new CardDef("Shattering Rock", 3, (ad, _) => { return "Deal " + (2 + ad) + " damage to target enemy, then add 3 Rock Splinters to your hand which deal " + (1 + ad) + " damage to target enemy for 0 energy."; }, new CardActions((world, card) => {
+const card_9 = new CardDef("Shattering Rock", 3, (ad, _) => { return "Deal " + (3 + ad) + " damage to target enemy, then if it killed the enemy, add 3 Rock Splinters to your hand which deal " + (1 + ad) + " damage to target enemy for 0 energy"; }, new CardActions((world, card) => {
     world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
     world.state = State.Targeting;
 }, (world, card) => {
     for (let target of card.targets_e) {
-        world.enemies.get(target).hp -= 2 + additional_damage;
+        world.enemies.get(target).hp -= 3 + additional_damage;
+        if (world.enemies.get(target).hp <= 0) {
+            world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { for (let target of card.targets_e) {
+                world.enemies.get(target).hp -= 1 + additional_damage;
+            } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, CardImage.Rock, CardColor.Green, false));
+            world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { for (let target of card.targets_e) {
+                world.enemies.get(target).hp -= 1 + additional_damage;
+            } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, CardImage.Rock, CardColor.Green, false));
+            world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { for (let target of card.targets_e) {
+                world.enemies.get(target).hp -= 1 + additional_damage;
+            } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, CardImage.Rock, CardColor.Green, false));
+        }
     }
-    world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { for (let target of card.targets_e) {
-        world.enemies.get(target).hp -= 1 + additional_damage;
-    } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, CardImage.Rock, CardColor.Green, false));
-    world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { for (let target of card.targets_e) {
-        world.enemies.get(target).hp -= 1 + additional_damage;
-    } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, CardImage.Rock, CardColor.Green, false));
-    world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { for (let target of card.targets_e) {
-        world.enemies.get(target).hp -= 1 + additional_damage;
-    } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, CardImage.Rock, CardColor.Green, false));
     console.log(world.player_hand);
     world.cur_energy -= card.card.energy_cost;
     world.state = State.Playing;
