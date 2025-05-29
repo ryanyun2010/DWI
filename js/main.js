@@ -435,6 +435,7 @@ class World {
         this.discard = [];
         for (let c of this.player_deck) {
             c.energy_cost = c.base_energy_cost;
+            c.p_energy_cost = c.base_energy_cost;
             c.tracker = 0;
         }
         this.level += 1;
