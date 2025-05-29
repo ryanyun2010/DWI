@@ -1400,6 +1400,7 @@ const card_10 = new CardDef("Supernova", 7, (_) => { return "Discard your hand, 
     world.discard = [...world.discard, ...world.player_hand];
     world.cur_deck = [...world.discard];
     world.discard = [];
+    world.player_hand = [];
     world.cur_energy -= card.card.energy_cost;
     world.shuffle();
     for (let c of world.cur_deck) {
