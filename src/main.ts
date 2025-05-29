@@ -54,6 +54,7 @@ const START_LEVELS = [
  [[15,9,[EB.Speedy]]],
  [],
  [[6,7,[]], [12,6,[]],],
+ [],
  [[60,60,[EB.Big, EB.Speedy]]]
  ]
 ];
