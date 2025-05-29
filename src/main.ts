@@ -1675,6 +1675,7 @@ const card_14 = new CardDef("Relentless Crusade", 2, (ad, t) => {return "Deal " 
 		card.card.tracker ++;
 		world.cur_energy -= card.card.energy_cost;
 		card.card.energy_cost += 2;
+		card.card.p_energy_cost += 2;
 		world.state = State.Playing;
 		card.card.energy_cost = card.card.p_energy_cost;
 		world.cur_deck.unshift(card.card);
