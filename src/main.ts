@@ -49,6 +49,31 @@ let LEVELS = []
 
 
 
+enum CardImage {
+	NONE,
+	NULL,
+	PANDA,
+	IGNORE,
+	THIS,
+	Fireball1,
+	Fireball2, 
+	Lightning,
+	Crusade,
+	Rock
+}
+
+enum CardColor {
+	NONE,
+	NULL,
+	PANDA,
+	IGNORE,
+	THIS,
+	Blue,
+	White,
+	Green,
+	Red
+}
+
 
 
 class CardDef {
@@ -57,12 +82,16 @@ class CardDef {
 	description: (additional_damage: number, tracker: number) => string;
 	actions: CardActions;
 	t_size: number;
-	constructor(name: string, energy_cost: number, description: (additional_damage: number, tracker: number) => string, actions: CardActions, t_size?: number){
+	card_image: CardImage;
+	card_color: CardColor;
+	constructor(name: string, energy_cost: number, description: (additional_damage: number, tracker: number) => string, actions: CardActions, t_size?: number, card_image?: CardImage, card_color?: CardColor){
 		this.name = name;
 		this.energy_cost = energy_cost;
 		this.description = description;
 		this.actions = actions;
 		this.t_size = t_size || 9;
+		this.card_image = (card_image != null)? card_image : CardImage.Lightning;
+		this.card_color = (card_color != null)? card_color: CardColor.Blue;
 	}
 }
 
@@ -73,20 +102,22 @@ class Card {
 	description: (additional_damage: number, tracker: number) => string;
 	actions: CardActions;
 	t_size: number;
-	card_image: P5.Image;
+	card_image: CardImage;
 	base_energy_cost: number;
 	tracker: number;
 	discardable: boolean;
-	constructor(name: string, energy_cost: number, description: (additional_damage: number, tracker: number) => string, actions: CardActions, t_size?: number, card_image?: P5.Image, discardable?: boolean){
+	card_color: CardColor;
+	constructor(name: string, energy_cost: number, description: (additional_damage: number, tracker: number) => string, actions: CardActions, t_size?: number, card_image?: CardImage, card_color?: CardColor, discardable?: boolean){
 		this.name = name;
 		this.energy_cost = energy_cost;
 		this.description = description;
 		this.actions = actions;
 		this.t_size = t_size || 9;
-		this.card_image = card_image;
+		this.card_image = card_image || CardImage.Lightning;
 		this.base_energy_cost = energy_cost;
 		this.tracker = 0;
 		this.discardable = (discardable != null) ? discardable : true;
+		this.card_color = (card_color != null)? card_color: CardColor.Blue;
 	}
 	desc() {
 		return this.description(additional_damage, this.tracker);
@@ -99,7 +130,18 @@ class Card {
 		let h = CARD_HEIGHT * factor;
 		let rx = x - (CARD_WIDTH * (factor-1)/2);
 		let ry = y - (CARD_HEIGHT * (factor-1)/2);
-		p5.image(cardimg,rx,ry,w, h);	
+		if (this.card_color == CardColor.Blue) {
+			p5.image(cardimgbl,rx,ry,w, h);	
+		}
+		if (this.card_color == CardColor.White) {
+			p5.image(cardimgwh,rx,ry,w, h);	
+		}
+		if (this.card_color == CardColor.Green) {
+			p5.image(cardimggr,rx,ry,w, h);	
+		}
+		if (this.card_color == CardColor.Red) {
+			p5.image(cardimgre,rx,ry,w, h);	
+		}
 		p5.noStroke();
 		p5.textStyle(p5.NORMAL);
 		p5.fill("white");
@@ -107,8 +149,33 @@ class Card {
 		p5.strokeWeight(2);
 		p5.stroke("black");
 		p5.textAlign(p5.CENTER);
-		p5.image(li, rx + factor * 20.4, ry + factor * 26, w * 2/3, h * 7/20);
-		p5.image(ct, rx - factor * 6, ry + factor * 9.5, w * 1.1, h * 9/40);
+		if (this.card_image == CardImage.Lightning) {
+			p5.image(li, rx + factor * 20.4, ry + factor * 26, w * 2/3, h * 7/20);
+		}
+		if (this.card_image == CardImage.Fireball1) {
+			p5.image(f1, rx + factor * 20.4, ry + factor * 26, w * 2/3, h * 7/20);
+		}
+		if (this.card_image == CardImage.Fireball2) {
+			p5.image(f2, rx + factor * 20.4, ry + factor * 26, w * 2/3, h * 7/20);
+		}
+		if (this.card_image == CardImage.Crusade) {
+			p5.image(cru, rx + factor * 20.4, ry + factor * 26, w * 2/3, h * 7/20);
+		}
+		if (this.card_image == CardImage.Rock) {
+			p5.image(roc, rx + factor * 20.4, ry + factor * 26, w * 2/3, h * 7/20);
+		}
+		if (this.card_color == CardColor.Blue) {
+			p5.image(cardtopbl, rx - factor * 6, ry + factor * 9.5, w * 1.1, h * 9/40);
+		}
+		if (this.card_color == CardColor.White) {
+			p5.image(cardtopwh, rx - factor * 6, ry + factor * 9.5, w * 1.1, h * 9/40);
+		}
+		if (this.card_color == CardColor.Green) {
+			p5.image(cardtopgr, rx - factor * 6, ry + factor * 9.5, w * 1.1, h * 9/40);
+		}
+		if (this.card_color == CardColor.Red) {
+			p5.image(cardtopre, rx - factor * 6, ry + factor * 9.5, w * 1.1, h * 9/40);
+		}
 		p5.text(this.name, rx + factor*62, ry+factor*25);
 		p5.noStroke();
 		p5.textSize(factor*13);
@@ -390,7 +457,7 @@ class World {
 		this.player_deck.push(new Card(card_def.name, card_def.energy_cost, card_def.description, card_def.actions, card_def.t_size));
 	}
 	make_card(card_def: CardDef) {
-		return new Card(card_def.name, card_def.energy_cost, card_def.description, card_def.actions, card_def.t_size);
+		return new Card(card_def.name, card_def.energy_cost, card_def.description, card_def.actions, card_def.t_size, card_def.card_image, card_def.card_color);
 	}
 	draw_card() {
 		if (this.cur_deck.length > 0) {
@@ -465,6 +532,7 @@ class World {
 		this.add_cards(8);
 		this.tutorial = false;
 		this.level = 0;
+		additional_damage = 0;
 		this.max_energy = 0;
 		this.turn = -1;
 		this.perm_cards = [];
@@ -479,6 +547,7 @@ class World {
 		this.state = State.Playing;
 		this.tutorial = true;
 		this.tutorial_stage = 0;
+		additional_damage = 0;
 		this.level = 0;
 		this.max_energy = 0;
 		this.turn = -1;
@@ -1414,7 +1483,7 @@ const card_4 = new CardDef("Overwhelming Wave", 3, (ad: number, _) => {return "d
 
 
 
-const card_5 = new CardDef("Fiery Inferno", 3, (ad: number, _) => {return "for the rest of the game, at the end of each turn, deal " + (2 + ad) + " damage to to all enemies, and take 2 damage"}, new CardActions(
+const card_5 = new CardDef("Fiery Inferno", 3, (ad: number, _) => {return "for the rest of the level, at the end of each turn, deal " + (2 + ad) + " damage to to all enemies, and take 2 damage"}, new CardActions(
 	(world: World, card: CardOnMouse) => {
 		world.perm_cards.push(new CardPerm(card.card));
 		world.cur_energy -= card.card.energy_cost;
@@ -1428,7 +1497,7 @@ const card_5 = new CardDef("Fiery Inferno", 3, (ad: number, _) => {return "for t
 		world.hp -= 2;
 		return true;
 	}
-), 7)
+), 7, CardImage.Fireball1, CardColor.Red)
 // 7
 const card_6 = new CardDef("Nature's Reclamation", 2, (_a, _t) => {return "remove a card on the battlefield, then, heal for 2."}, new CardActions(
 	(world: World, card: CardOnMouse) => {
@@ -1467,7 +1536,7 @@ const card_7 = new CardDef("FIREBALL", 0, (ad: number, _) => {
 		world.state = State.Playing;
 		world.discard.push(card.card);
 	}
-), 5)
+), 5, CardImage.Fireball1, CardColor.Red)
 // 8
 
 
@@ -1494,14 +1563,14 @@ const card_9 = new CardDef("Shattering Rock", 3, (ad: number, _) => {return "Dea
 		for (let target of card.targets_e) {
 			world.enemies.get(target).hp -= 2 + additional_damage;
 		}
-		world.player_hand.push(new Card("Rock Splinter", 0, (ad: number, _) => {return "deal " + (1 + ad) + " damage to target enemy"}, new CardActions( (world: World, card: CardOnMouse) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world: World, card: CardTargeting) => { for (let target of card.targets_e) { world.enemies.get(target).hp -= 1 + additional_damage; } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }),null,null,false)); 
-		world.player_hand.push(new Card("Rock Splinter", 0, (ad: number, _) => {return "deal " + (1 + ad) + " damage to target enemy"}, new CardActions( (world: World, card: CardOnMouse) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world: World, card: CardTargeting) => { for (let target of card.targets_e) { world.enemies.get(target).hp -= 1 + additional_damage; } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }),null,null,false)); 
-		world.player_hand.push(new Card("Rock Splinter", 0, (ad: number, _) => {return "deal " + (1 + ad) + " damage to target enemy"}, new CardActions( (world: World, card: CardOnMouse) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world: World, card: CardTargeting) => { for (let target of card.targets_e) { world.enemies.get(target).hp -= 1 + additional_damage; } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }),null,null,false)); 
+		world.player_hand.push(new Card("Rock Splinter", 0, (ad: number, _) => {return "deal " + (1 + ad) + " damage to target enemy"}, new CardActions( (world: World, card: CardOnMouse) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world: World, card: CardTargeting) => { for (let target of card.targets_e) { world.enemies.get(target).hp -= 1 + additional_damage; } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }),null,null,null,false)); 
+		world.player_hand.push(new Card("Rock Splinter", 0, (ad: number, _) => {return "deal " + (1 + ad) + " damage to target enemy"}, new CardActions( (world: World, card: CardOnMouse) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world: World, card: CardTargeting) => { for (let target of card.targets_e) { world.enemies.get(target).hp -= 1 + additional_damage; } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }),null,null,null,false)); 
+		world.player_hand.push(new Card("Rock Splinter", 0, (ad: number, _) => {return "deal " + (1 + ad) + " damage to target enemy"}, new CardActions( (world: World, card: CardOnMouse) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world: World, card: CardTargeting) => { for (let target of card.targets_e) { world.enemies.get(target).hp -= 1 + additional_damage; } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }),null,null,null,false)); 
 		console.log(world.player_hand);
 		world.cur_energy -= card.card.energy_cost; world.state = State.Playing;
 		world.discard.push(card.card);
 	}
-), 7)
+), 7, CardImage.Rock, CardColor.Green)
 
 // 9
 
@@ -1520,7 +1589,7 @@ const card_10 = new CardDef("Supernova", 7, (_) => {return "Discard your hand, s
 
 	},
 	(_world: World, _card: CardTargeting) => {}
-), 6)
+), 6, CardImage.Fireball1, CardColor.Red)
 // 5
 const card_11 = new CardDef("Blood Pact", 2, (_a, _t) => {return "Lose 2 life, then draw 2 cards"}, new CardActions(
 	(world: World, card: CardOnMouse) => {
@@ -1561,7 +1630,7 @@ const card_13 = new CardDef("Leyline", 5, (_a, _t) => {return "For the rest of t
 ))
 
 // 7
-const card_14 = new CardDef("Relentless Crusade", 2, (ad, t) => {return "Deal " + (2 + ad + t * 2) + " damage to up to 2 target enemies, then for the rest of the level increase this card's damage by 2, and its mana cost by 2, put this card back on the top of your deck"}, new CardActions(
+const card_14 = new CardDef("Relentless Crusade", 2, (ad, t) => {return "Deal " + (2 + ad + t * 2) + " damage to up to 2 target enemies, then for the rest of the level increase this card's damage by 2, and its mana cost by 2, then, this card goes back on the top of your deck"}, new CardActions(
 	(world: World, card: CardOnMouse) => {
 		world.card_targeting = new CardTargeting(card.card, card.index, 2, true, false);
 		world.state = State.Targeting;
@@ -1576,29 +1645,45 @@ const card_14 = new CardDef("Relentless Crusade", 2, (ad, t) => {return "Deal " 
 		world.state = State.Playing;
 		world.cur_deck.unshift(card.card);
 	}
-), 6.1);
+), 6.1, CardImage.Crusade, CardColor.White);
 // 6
 let cur_id = 1;
 let tutorial_complete = false;
 
-let cardimg: P5.Image;
+let cardimgbl: P5.Image;
+let cardimgwh: P5.Image;
+let cardimggr: P5.Image;
+let cardimgre: P5.Image;
+let cardtopbl: P5.Image;
+let cardtopwh: P5.Image;
+let cardtopgr: P5.Image;
+let cardtopre: P5.Image;
 let hpb: P5.Image;
 let eb: P5.Image;
 let f1: P5.Image;
 let f2: P5.Image;
 let li: P5.Image;
-let ct: P5.Image;
 let cb: P5.Image;
+let cru: P5.Image;
+let roc: P5.Image;
 const sketch = (p5: P5) => { 
 	p5.preload = async function() {
-		cardimg = p5.loadImage("./img/card.png");
+		cardimgbl = p5.loadImage("./img/card.png");
+		cardimgwh = p5.loadImage("./img/card_white.png");
+		cardimggr = p5.loadImage("./img/card_green.png");
+		cardimgre = p5.loadImage("./img/card_red.png");
 		eb = p5.loadImage("./img/energy.png");
 		hpb = p5.loadImage("./img/hp.png");
 		f1 = p5.loadImage("./img/fireball.png");
 		f2 = p5.loadImage("./img/fire2.png");
 		li = p5.loadImage("./img/lightning.png");
-		ct = p5.loadImage("./img/top.png");
+		cardtopbl = p5.loadImage("./img/top.png");
+		cardtopwh = p5.loadImage("./img/top_white.png");
+		cardtopgr = p5.loadImage("./img/top_green.png");
+		cardtopre = p5.loadImage("./img/top_red.png");
 		cb = p5.loadImage("./img/card_back.png");
+		cru = p5.loadImage("./img/crusade.png");
+		roc = p5.loadImage("./img/rock.png");
 	}
 
 	p5.setup = function () {
