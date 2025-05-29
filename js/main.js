@@ -269,47 +269,50 @@ function selection(world, num) {
 }
 function select(world) {
     let r = Math.random();
-    if (r < 10 / 96) {
+    if (r < 10 / 111) {
         return world.make_card(card_1);
     }
-    else if (r < 18 / 104) {
+    else if (r < 18 / 111) {
         return world.make_card(card_2);
     }
-    else if (r < 25 / 104) {
+    else if (r < 25 / 111) {
         return world.make_card(card_3);
     }
-    else if (r < 33 / 104) {
+    else if (r < 33 / 111) {
         return world.make_card(card_4);
     }
-    else if (r < 40 / 104) {
+    else if (r < 40 / 111) {
         return world.make_card(card_5);
     }
-    else if (r < 46 / 104) {
+    else if (r < 46 / 111) {
         return world.make_card(card_6);
     }
-    else if (r < 54 / 104) {
+    else if (r < 54 / 111) {
         return world.make_card(card_7);
     }
-    else if (r < 62 / 104) {
+    else if (r < 62 / 111) {
         return world.make_card(card_8);
     }
-    else if (r < 71 / 104) {
+    else if (r < 71 / 111) {
         return world.make_card(card_9);
     }
-    else if (r < 77 / 104) {
+    else if (r < 77 / 111) {
         return world.make_card(card_10);
     }
-    else if (r < 82 / 104) {
+    else if (r < 82 / 111) {
         return world.make_card(card_11);
     }
-    else if (r < 90 / 104) {
+    else if (r < 90 / 111) {
         return world.make_card(card_12);
     }
-    else if (r < 96 / 104) {
+    else if (r < 96 / 111) {
         return world.make_card(card_13);
     }
-    else {
+    else if (r < 104 / 111) {
         return world.make_card(card_14);
+    }
+    else {
+        return world.make_card(card_15);
     }
 }
 var State;
@@ -1383,13 +1386,13 @@ const card_9 = new CardDef("Shattering Rock", 3, (ad, _) => { return "Deal " + (
     }
     world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { for (let target of card.targets_e) {
         world.enemies.get(target).hp -= 1 + additional_damage;
-    } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, null, null, false));
+    } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, CardImage.Rock, CardColor.Green, false));
     world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { for (let target of card.targets_e) {
         world.enemies.get(target).hp -= 1 + additional_damage;
-    } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, null, null, false));
+    } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, CardImage.Rock, CardColor.Green, false));
     world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { for (let target of card.targets_e) {
         world.enemies.get(target).hp -= 1 + additional_damage;
-    } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, null, null, false));
+    } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, CardImage.Rock, CardColor.Green, false));
     console.log(world.player_hand);
     world.cur_energy -= card.card.energy_cost;
     world.state = State.Playing;
@@ -1450,6 +1453,14 @@ const card_14 = new CardDef("Relentless Crusade", 2, (ad, t) => { return "Deal "
     world.cur_deck.unshift(card.card);
 }), 6.1, CardImage.Crusade, CardColor.White);
 // 6
+const card_15 = new CardDef("Force Push", 3, (_a, _t) => { return "Move all enemies one space back"; }, new CardActions((world, card) => {
+    for (let target of world.enemies) {
+        target[1].y = Math.max(target[1].y - 80, 100);
+    }
+    world.cur_energy -= card.card.energy_cost;
+    world.state = State.Playing;
+}, (_world, _card) => {
+}), null, CardImage.Crusade, CardColor.White);
 let cur_id = 1;
 let tutorial_complete = false;
 let cardimgbl;
