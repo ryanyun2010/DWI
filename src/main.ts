@@ -1515,8 +1515,8 @@ const card_6 = new CardDef("Nature's Reclamation", 2, (_a, _t) => {return "remov
 
 const card_7 = new CardDef("FIREBALL", 0, (ad: number, _) => {
 
-	if (ad == 0 ) {return "Deal X damage evenly spread (rounded down) amoung any number of target enemies, where X is the 1.5 times the amount of energy you have left (rounded down). For each target beyond the first, decrease X by 1, X cannot be negative. Consume all of your energy.";}
-	else{ return "Deal X damage evenly spread (rounded down) + " + ad + " amoung any number of target enemies, where X is the 1.5 times the amount of energy you have left (rounded down). For each target beyond the first, decrease X by 1, X cannot be negative. Consume all of your energy.";}
+	if (ad == 0 ) {return "Deal X damage evenly spread (rounded down) among any number of target enemies, where X is the 1.5 times the amount of energy you have left (rounded down). For each target beyond the first, decrease X by 1, X cannot be negative. Consume all of your energy.";}
+	else{ return "Deal X damage evenly spread (rounded down) + " + ad + " among any number of target enemies, where X is the 1.5 times the amount of energy you have left (rounded down). For each target beyond the first, decrease X by 1, X cannot be negative. Consume all of your energy.";}
 
 
 }, new CardActions(
@@ -1688,6 +1688,8 @@ const sketch = (p5: P5) => {
 
 	p5.setup = function () {
 		p5.createCanvas(WIDTH,HEIGHT);
+		document.querySelector("canvas").style.width = "100vw";
+		document.querySelector("canvas").style.height = "100vh";
 	}
 
 	p5.draw = function draw() {
