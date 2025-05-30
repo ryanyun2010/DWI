@@ -353,46 +353,50 @@ function selection(world: World, num: number): Card[] {
 
 function select(world: World): Card {
 	let r = Math.random();
-	if (r < 10/145) {
+	if (r < 10/157) {
 		return world.make_card(card_1);
-	} else if (r < 18/145) {
+	} else if (r < 18/157) {
 		return world.make_card(card_2);
-	} else if (r < 25/145) {
+	} else if (r < 25/157) {
 		return world.make_card(card_3);
-	} else if (r < 33/145) {
+	} else if (r < 33/157) {
 		return world.make_card(card_4);
-	} else if (r < 40/145) {
+	} else if (r < 40/157) {
 		return world.make_card(card_5);
-	} else if (r < 46/145) {
+	} else if (r < 46/157) {
 		return world.make_card(card_6);
-	} else if (r < 54/145){
+	} else if (r < 54/157){
 		return world.make_card(card_7);
-	} else if (r < 62/145){
+	} else if (r < 62/157){
 		return world.make_card(card_8);
-	} else if (r < 71/145) {
+	} else if (r < 71/157) {
 		return world.make_card(card_9);
-	} else if (r < 77/145) {
+	} else if (r < 77/157) {
 		return world.make_card(card_10);
-	} else if (r < 82/145) {
+	} else if (r < 82/157) {
 		return world.make_card(card_11);
-	} else if (r < 90/145){
+	} else if (r < 90/157){
 		return world.make_card(card_12);
-	} else if (r < 96/145){
+	} else if (r < 96/157){
 		return world.make_card(card_13);
-	} else if (r < 104/145){
+	} else if (r < 104/157){
 		return world.make_card(card_14);
-	} else if (r < 111/145){
+	} else if (r < 111/157){
 		return world.make_card(card_15);
-	} else if (r < 118/145){
+	} else if (r < 118/157){
 		return world.make_card(card_16);
-	} else if (r < 125/145){
+	} else if (r < 125/157){
 		return world.make_card(card_17);
-	} else if (r < 132/145) {
+	} else if (r < 132/157) {
 		return world.make_card(card_18);
-	} else if (r < 139/145){
+	} else if (r < 139/157){
 		return world.make_card(card_19);
-	} else {
+	} else if (r < 145/157){
 		return world.make_card(card_20);
+	} else if (r < 151/157) {
+		return world.make_card(card_21);
+	} else {
+		return world.make_card(card_22);
 	}
 }
 
@@ -1778,7 +1782,7 @@ const card_17 = new CardDef("Poison", 2, (ad, _) => {return "Poison target enemy
 	}
 ), 8.4, null,null);
 
-const card_18 = new CardDef("Toxic Deluge", 5, (ad, _) => {return "Badly poison target enemy, until it dies, it takes " + (2 + ad) + " damage at the end of each turn, at the end of each turn, increase that damage by 1"}, new CardActions(
+const card_18 = new CardDef("Toxic Deluge", 4, (ad, _) => {return "Badly poison target enemy, until it dies, it takes " + (2 + ad) + " damage at the end of each turn, at the end of each turn, increase that damage by 1"}, new CardActions(
 	(world: World, card: CardOnMouse) => {
 		world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
 		world.state = State.Targeting;
@@ -1826,6 +1830,35 @@ const card_20 = new CardDef("Corrosion", 3, (ad, _) => {return "double target en
 		world.discard.push(card.card);
 	}
 ), null, null,null);
+
+const card_21 = new CardDef("Poison Bomb", 3, (ad, _) => {return "Poison all enemies for " + (1 + ad) + ". Until they die, they take " + (1 + ad) + " damage at the end of each turn"}, new CardActions(
+	(world: World, card: CardOnMouse) => {
+		for (let target of world.enemies) {
+			target[1].poison += (1 + additional_damage);
+		}
+		world.cur_energy -= card.card.energy_cost;
+		world.state = State.Playing;
+		card.card.energy_cost = card.card.p_energy_cost;
+		world.discard.push(card.card);
+	},
+	(world: World, card: CardTargeting) => {
+	}
+), 7.6, null,null);
+
+const card_22 = new CardDef("Toxic Bomb", 6, (ad, _) => {return "Badly poison all enemies for " + (1 + ad) + ". Until they die, they take " +  (1 + ad) + " damage at the end of each turn, at the end of each turn, increase that damage by 1"}, new CardActions(
+	(world: World, card: CardOnMouse) => {
+		for (let target of world.enemies) {
+			target[1].poison += (1 + additional_damage);
+			target[1].toxic += 1;
+		}
+		world.cur_energy -= card.card.energy_cost;
+		world.state = State.Playing;
+		card.card.energy_cost = card.card.p_energy_cost;
+		world.discard.push(card.card);
+	},
+	(world: World, card: CardTargeting) => {
+	}
+), 7.2, null,null);
 let cur_id = 1;
 let tutorial_complete = false;
 
