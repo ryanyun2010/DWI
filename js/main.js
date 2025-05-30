@@ -293,62 +293,65 @@ function selection(world, num) {
 }
 function select(world) {
     let r = Math.random();
-    if (r < 10 / 139) {
+    if (r < 10 / 145) {
         return world.make_card(card_1);
     }
-    else if (r < 18 / 139) {
+    else if (r < 18 / 145) {
         return world.make_card(card_2);
     }
-    else if (r < 25 / 139) {
+    else if (r < 25 / 145) {
         return world.make_card(card_3);
     }
-    else if (r < 33 / 139) {
+    else if (r < 33 / 145) {
         return world.make_card(card_4);
     }
-    else if (r < 40 / 139) {
+    else if (r < 40 / 145) {
         return world.make_card(card_5);
     }
-    else if (r < 46 / 139) {
+    else if (r < 46 / 145) {
         return world.make_card(card_6);
     }
-    else if (r < 54 / 139) {
+    else if (r < 54 / 145) {
         return world.make_card(card_7);
     }
-    else if (r < 62 / 139) {
+    else if (r < 62 / 145) {
         return world.make_card(card_8);
     }
-    else if (r < 71 / 139) {
+    else if (r < 71 / 145) {
         return world.make_card(card_9);
     }
-    else if (r < 77 / 139) {
+    else if (r < 77 / 145) {
         return world.make_card(card_10);
     }
-    else if (r < 82 / 139) {
+    else if (r < 82 / 145) {
         return world.make_card(card_11);
     }
-    else if (r < 90 / 139) {
+    else if (r < 90 / 145) {
         return world.make_card(card_12);
     }
-    else if (r < 96 / 139) {
+    else if (r < 96 / 145) {
         return world.make_card(card_13);
     }
-    else if (r < 104 / 139) {
+    else if (r < 104 / 145) {
         return world.make_card(card_14);
     }
-    else if (r < 111 / 139) {
+    else if (r < 111 / 145) {
         return world.make_card(card_15);
     }
-    else if (r < 118 / 139) {
+    else if (r < 118 / 145) {
         return world.make_card(card_16);
     }
-    else if (r < 125 / 139) {
+    else if (r < 125 / 145) {
         return world.make_card(card_17);
     }
-    else if (r < 132 / 139) {
+    else if (r < 132 / 145) {
         return world.make_card(card_18);
     }
-    else {
+    else if (r < 139 / 145) {
         return world.make_card(card_19);
+    }
+    else {
+        return world.make_card(card_20);
     }
 }
 var State;
@@ -1595,6 +1598,18 @@ const card_19 = new CardDef("Wind Burst", 3, (ad, _) => { return "Push target en
     card.card.energy_cost = card.card.p_energy_cost;
     world.discard.push(card.card);
 }), null, CardImage.Crusade, CardColor.White);
+const card_20 = new CardDef("Corrosion", 3, (ad, _) => { return "double target enemies poison count"; }, new CardActions((world, card) => {
+    world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
+    world.state = State.Targeting;
+}, (world, card) => {
+    for (let target of card.targets_e) {
+        world.enemies.get(target).poison *= 2;
+    }
+    world.cur_energy -= card.card.energy_cost;
+    world.state = State.Playing;
+    card.card.energy_cost = card.card.p_energy_cost;
+    world.discard.push(card.card);
+}), null, null, null);
 let cur_id = 1;
 let tutorial_complete = false;
 let cardimgbl;
