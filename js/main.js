@@ -742,7 +742,7 @@ class Camera {
             p5.textAlign(p5.CENTER);
             p5.fill("black");
             p5.noStroke();
-            p5.text("Click anywhere to start", WIDTH / 2, HEIGHT / 2);
+            p5.text("Click anywhere to start", WIDTH / 2, HEIGHT / 2 - 10);
             return;
         }
         if (world.state == State.GameOver) {
@@ -1032,10 +1032,22 @@ class Camera {
             p5.fill(0);
             p5.textStyle(p5.NORMAL);
             if (world.level == 0) { // TODO
-                p5.text("Choose a card to add to your starting deck! (" + (world.total_card_adds - world.card_adds_left) + "/" + world.total_card_adds + ")", WIDTH / 2, 200);
+                if (world.card_adds_left == world.total_card_adds - 1) {
+                    p5.textSize(25);
+                    p5.text("You were drafted to fight against the hoard of red squares,\nbut unfortunately when you fought your very first enemy,\nyou lost both your arms and legs and can no longer move.\nTo compensate, God is willing to grant you 8 blessings so you can continue your fight.\n\n Choose a card to add to your starting deck! (" + (world.total_card_adds - world.card_adds_left) + "/" + world.total_card_adds + ")", WIDTH / 2, 100);
+                }
+                else {
+                    p5.text("Choose a card to add to your starting deck! (" + (world.total_card_adds - world.card_adds_left) + "/" + world.total_card_adds + ")", WIDTH / 2, 200);
+                }
             }
             else {
-                p5.text("Level Complete! \n Choose a card to add to your deck! (" + (world.total_card_adds - world.card_adds_left) + "/" + world.total_card_adds + ")", WIDTH / 2, 200);
+                if (world.card_adds_left == world.total_card_adds - 1) {
+                    p5.textSize(25);
+                    p5.text("Level Complete!\nTo reward your achievement, God is willing to grant you two more blessings\n\nChoose a card to add to your deck! (" + (world.total_card_adds - world.card_adds_left) + "/" + world.total_card_adds + ")", WIDTH / 2, 120);
+                }
+                else {
+                    p5.text("Choose a card to add to your deck! (" + (world.total_card_adds - world.card_adds_left) + "/" + world.total_card_adds + ")", WIDTH / 2, 200);
+                }
             }
             world.cards_being_shown[0].render(p5, 350 + 13.88, 320, 1.3);
             world.cards_being_shown[1].render(p5, 650 + 13.88, 320, 1.3);
@@ -1570,13 +1582,13 @@ const card_18 = new CardDef("Toxic Deluge", 5, (ad, _) => { return "Badly poison
     world.state = State.Playing;
     card.card.energy_cost = card.card.p_energy_cost;
     world.discard.push(card.card);
-}), 7.6, null, null);
+}), 7.3, null, null);
 const card_19 = new CardDef("Wind Burst", 3, (ad, _) => { return "Push target enemy back 3 spaces"; }, new CardActions((world, card) => {
     world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
     world.state = State.Targeting;
 }, (world, card) => {
     for (let target of card.targets_e) {
-        target[1].y = Math.max(target[1].y - 80 * 3, 100);
+        world.enemies.get(target).y = Math.max(world.enemies.get(target).y - 80 * 3, 100);
     }
     world.cur_energy -= card.card.energy_cost;
     world.state = State.Playing;
