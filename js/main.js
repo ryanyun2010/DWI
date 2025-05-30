@@ -236,6 +236,8 @@ class Enemy {
         this.max_hp = hp;
         this.damage = damage;
         this.tags = eb;
+        this.poison = 0;
+        this.toxic = 0;
     }
     render(p5) {
         p5.textAlign(p5.CENTER);
@@ -263,6 +265,13 @@ class Enemy {
         p5.textAlign(p5.RIGHT);
         p5.text(this.hp + "/" + this.max_hp, this.x + this.w * 1.5 - 5, this.y - 12.8);
         p5.textAlign(p5.CENTER);
+        if (this.poison > 0) {
+            p5.textSize(11);
+            p5.fill(0, 180, 10);
+            p5.textAlign(p5.LEFT);
+            p5.text("POISONED FOR " + this.poison, this.x - this.w * 0.5 - 1, this.y - 30.8);
+            p5.textAlign(p5.CENTER);
+        }
     }
 }
 function shuffle(array) {
@@ -284,53 +293,62 @@ function selection(world, num) {
 }
 function select(world) {
     let r = Math.random();
-    if (r < 10 / 118) {
+    if (r < 10 / 139) {
         return world.make_card(card_1);
     }
-    else if (r < 18 / 118) {
+    else if (r < 18 / 139) {
         return world.make_card(card_2);
     }
-    else if (r < 25 / 118) {
+    else if (r < 25 / 139) {
         return world.make_card(card_3);
     }
-    else if (r < 33 / 118) {
+    else if (r < 33 / 139) {
         return world.make_card(card_4);
     }
-    else if (r < 40 / 118) {
+    else if (r < 40 / 139) {
         return world.make_card(card_5);
     }
-    else if (r < 46 / 118) {
+    else if (r < 46 / 139) {
         return world.make_card(card_6);
     }
-    else if (r < 54 / 118) {
+    else if (r < 54 / 139) {
         return world.make_card(card_7);
     }
-    else if (r < 62 / 118) {
+    else if (r < 62 / 139) {
         return world.make_card(card_8);
     }
-    else if (r < 71 / 118) {
+    else if (r < 71 / 139) {
         return world.make_card(card_9);
     }
-    else if (r < 77 / 118) {
+    else if (r < 77 / 139) {
         return world.make_card(card_10);
     }
-    else if (r < 82 / 118) {
+    else if (r < 82 / 139) {
         return world.make_card(card_11);
     }
-    else if (r < 90 / 118) {
+    else if (r < 90 / 139) {
         return world.make_card(card_12);
     }
-    else if (r < 96 / 118) {
+    else if (r < 96 / 139) {
         return world.make_card(card_13);
     }
-    else if (r < 104 / 118) {
+    else if (r < 104 / 139) {
         return world.make_card(card_14);
     }
-    else if (r < 111 / 118) {
+    else if (r < 111 / 139) {
         return world.make_card(card_15);
     }
-    else {
+    else if (r < 118 / 139) {
         return world.make_card(card_16);
+    }
+    else if (r < 125 / 139) {
+        return world.make_card(card_17);
+    }
+    else if (r < 132 / 139) {
+        return world.make_card(card_18);
+    }
+    else {
+        return world.make_card(card_19);
     }
 }
 var State;
@@ -425,6 +443,23 @@ class World {
         }
         if (!(this.state == State.Playing))
             return;
+        for (let enemy of world.enemies) {
+            enemy[1].hp -= enemy[1].poison;
+            enemy[1].poison += enemy[1].toxic;
+        }
+        for (let enemy of this.enemies) {
+            if (enemy[1].hp <= 0) {
+                this.enemies.delete(enemy[0]);
+                if (world.tutorial_stage == 4) {
+                    world.tutorial_stage++;
+                }
+                if (world.tutorial_stage == 12) {
+                    world.tutorial = false;
+                    world.tutorial_stage = 100;
+                    world.start();
+                }
+            }
+        }
         this.cur_card_trigger_eot = 0;
         this.state = State.EndPhase;
         this.triggering_card = null;
@@ -1511,6 +1546,43 @@ const card_16 = new CardDef("Renewal", 2, (_a, _t) => { return "A random card fr
     world.discard.push(card.card);
 }, (_world, _card) => {
 }), 8.2, CardImage.Lightning, CardColor.Blue);
+const card_17 = new CardDef("Poison", 2, (ad, _) => { return "Poison target enemy, until it dies, it takes " + (2 + ad) + " damage at the end of each turn"; }, new CardActions((world, card) => {
+    world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
+    world.state = State.Targeting;
+}, (world, card) => {
+    for (let target of card.targets_e) {
+        world.enemies.get(target).poison += 2;
+    }
+    world.cur_energy -= card.card.energy_cost;
+    world.state = State.Playing;
+    card.card.energy_cost = card.card.p_energy_cost;
+    world.discard.push(card.card);
+}), 8.4, null, null);
+const card_18 = new CardDef("Toxic Deluge", 5, (ad, _) => { return "Badly poison target enemy, until it dies, it takes " + (2 + ad) + " damage at the end of each turn, at the end of each turn, increase that damage by 1"; }, new CardActions((world, card) => {
+    world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
+    world.state = State.Targeting;
+}, (world, card) => {
+    for (let target of card.targets_e) {
+        world.enemies.get(target).poison += 2;
+        world.enemies.get(target).toxic += 1;
+    }
+    world.cur_energy -= card.card.energy_cost;
+    world.state = State.Playing;
+    card.card.energy_cost = card.card.p_energy_cost;
+    world.discard.push(card.card);
+}), 7.6, null, null);
+const card_19 = new CardDef("Wind Burst", 3, (ad, _) => { return "Push target enemy back 3 spaces"; }, new CardActions((world, card) => {
+    world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
+    world.state = State.Targeting;
+}, (world, card) => {
+    for (let target of card.targets_e) {
+        target[1].y = Math.max(target[1].y - 80 * 3, 100);
+    }
+    world.cur_energy -= card.card.energy_cost;
+    world.state = State.Playing;
+    card.card.energy_cost = card.card.p_energy_cost;
+    world.discard.push(card.card);
+}), null, CardImage.Crusade, CardColor.White);
 let cur_id = 1;
 let tutorial_complete = false;
 let cardimgbl;
