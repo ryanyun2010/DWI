@@ -1767,7 +1767,7 @@ const card_17 = new CardDef("Poison", 2, (ad, _) => {return "Poison target enemy
 	},
 	(world: World, card: CardTargeting) => {
 		for (let target of card.targets_e) {
-			world.enemies.get(target).poison += 2;
+			world.enemies.get(target).poison += 2 + ad;
 		}
 		world.cur_energy -= card.card.energy_cost;
 		world.state = State.Playing;
@@ -1783,7 +1783,7 @@ const card_18 = new CardDef("Toxic Deluge", 5, (ad, _) => {return "Badly poison 
 	},
 	(world: World, card: CardTargeting) => {
 		for (let target of card.targets_e) {
-			world.enemies.get(target).poison += 2;
+			world.enemies.get(target).poison += 2 + ad;
 			world.enemies.get(target).toxic += 1;
 		}
 		world.cur_energy -= card.card.energy_cost;
