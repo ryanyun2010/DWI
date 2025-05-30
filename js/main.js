@@ -1364,7 +1364,7 @@ const card_1 = new CardDef("Quickshot", 0, (ad, _) => { return "deal " + (1 + ad
     world.discard.push(card.card);
 }));
 // 10
-const card_2 = new CardDef("Lightning Bolt", 3, (ad, _) => { return "deal " + (2 + ad) + " damage to up to 3 target enemies"; }, new CardActions((world, card) => {
+const card_2 = new CardDef("Lightning Bolt", 2, (ad, _) => { return "deal " + (2 + ad) + " damage to up to 3 target enemies"; }, new CardActions((world, card) => {
     world.card_targeting = new CardTargeting(card.card, card.index, 3, true, false);
     world.state = State.Targeting;
 }, (world, card) => {
@@ -1377,7 +1377,7 @@ const card_2 = new CardDef("Lightning Bolt", 3, (ad, _) => { return "deal " + (2
     world.discard.push(card.card);
 }));
 // 8
-const card_3 = new CardDef("Smite", 4, (ad, _) => { return "deal " + (3 + ad) + " damage to up to 2 target enemies, draw a card"; }, new CardActions((world, card) => {
+const card_3 = new CardDef("Smite", 3, (ad, _) => { return "deal " + (3 + ad) + " damage to up to 2 target enemies, draw a card"; }, new CardActions((world, card) => {
     world.card_targeting = new CardTargeting(card.card, card.index, 2, true, false);
     world.state = State.Targeting;
 }, (world, card) => {
