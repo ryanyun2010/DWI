@@ -293,71 +293,17 @@ function selection(world, num) {
 }
 function select(world) {
     let r = Math.random();
-    if (r < 10 / 157) {
-        return world.make_card(card_1);
+    let sum = 0;
+    for (let c of cards) {
+        sum += c[1];
     }
-    else if (r < 18 / 157) {
-        return world.make_card(card_2);
-    }
-    else if (r < 25 / 157) {
-        return world.make_card(card_3);
-    }
-    else if (r < 33 / 157) {
-        return world.make_card(card_4);
-    }
-    else if (r < 40 / 157) {
-        return world.make_card(card_5);
-    }
-    else if (r < 46 / 157) {
-        return world.make_card(card_6);
-    }
-    else if (r < 54 / 157) {
-        return world.make_card(card_7);
-    }
-    else if (r < 62 / 157) {
-        return world.make_card(card_8);
-    }
-    else if (r < 71 / 157) {
-        return world.make_card(card_9);
-    }
-    else if (r < 77 / 157) {
-        return world.make_card(card_10);
-    }
-    else if (r < 82 / 157) {
-        return world.make_card(card_11);
-    }
-    else if (r < 90 / 157) {
-        return world.make_card(card_12);
-    }
-    else if (r < 96 / 157) {
-        return world.make_card(card_13);
-    }
-    else if (r < 104 / 157) {
-        return world.make_card(card_14);
-    }
-    else if (r < 111 / 157) {
-        return world.make_card(card_15);
-    }
-    else if (r < 118 / 157) {
-        return world.make_card(card_16);
-    }
-    else if (r < 125 / 157) {
-        return world.make_card(card_17);
-    }
-    else if (r < 132 / 157) {
-        return world.make_card(card_18);
-    }
-    else if (r < 139 / 157) {
-        return world.make_card(card_19);
-    }
-    else if (r < 145 / 157) {
-        return world.make_card(card_20);
-    }
-    else if (r < 151 / 157) {
-        return world.make_card(card_21);
-    }
-    else {
-        return world.make_card(card_22);
+    console.log(cards, sum);
+    let sum_so_far = 0;
+    for (let c of cards) {
+        if (r < (sum_so_far + c[1]) / sum) {
+            return world.make_card(c[0]);
+        }
+        sum_so_far += c[1];
     }
 }
 var State;
@@ -455,6 +401,9 @@ class World {
         for (let enemy of world.enemies) {
             enemy[1].hp -= enemy[1].poison;
             enemy[1].poison += enemy[1].toxic;
+            if (berserks_active > 0) {
+                world.hp = Math.min(world.hp + enemy[1].poison * berserks_active, world.maxhp);
+            }
         }
         for (let enemy of this.enemies) {
             if (enemy[1].hp <= 0) {
@@ -524,9 +473,9 @@ class World {
         this.perm_cards = [];
         this.player_hand = [];
         this.cur_deck = [
-            world.make_card(card_1),
-            world.make_card(card_12),
-            world.make_card(card_1)
+            world.make_card(cards[0][0]),
+            world.make_card(cards[11][0]),
+            world.make_card(cards[0][0])
         ];
         this.discard = [];
         this.hp = this.maxhp;
@@ -554,6 +503,20 @@ class World {
     }
     shuffle() {
         shuffle(this.cur_deck);
+    }
+    damage_enemy(enemy, damage) {
+        if (berserks_active > 0) {
+            this.hp = Math.min(this.hp + berserks_active * damage, this.maxhp);
+        }
+        enemy.hp -= damage;
+    }
+    pay_cost(card) {
+        if (berserks_active > 0) {
+            this.hp -= berserks_active * card.energy_cost;
+        }
+        else {
+            this.cur_energy -= card.energy_cost;
+        }
     }
     update() {
         if (this.state == State.Start)
@@ -591,7 +554,10 @@ class World {
                     this.triggering_card = null;
                 }
                 else if (this.t_time == 20) {
-                    this.triggering_card.card.actions.EOT(this, this.triggering_card);
+                    if (!this.triggering_card.card.actions.EOT(this, this.triggering_card)) {
+                        this.perm_cards.splice(this.cur_card_trigger_eot - 1, 1);
+                        this.cur_card_trigger_eot--;
+                    }
                 }
                 this.t_time--;
             }
@@ -1352,290 +1318,285 @@ const HEIGHT = 816;
 const WIDTH = 1470;
 let world = new World();
 let camera = new Camera();
-const card_1 = new CardDef("Quickshot", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => {
-    world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
-    world.state = State.Targeting;
-}, (world, card) => {
-    world.enemies.get(card.targets_e[0]).hp -= 1 + additional_damage;
-    world.cur_energy -= card.card.energy_cost;
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}));
-// 10
-const card_2 = new CardDef("Lightning Bolt", 2, (ad, _) => { return "deal " + (2 + ad) + " damage to up to 3 target enemies"; }, new CardActions((world, card) => {
-    world.card_targeting = new CardTargeting(card.card, card.index, 3, true, false);
-    world.state = State.Targeting;
-}, (world, card) => {
-    for (let target of card.targets_e) {
-        world.enemies.get(target).hp -= 2 + additional_damage;
-    }
-    world.cur_energy -= card.card.energy_cost;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.state = State.Playing;
-    world.discard.push(card.card);
-}));
-// 8
-const card_3 = new CardDef("Smite", 3, (ad, _) => { return "deal " + (3 + ad) + " damage to up to 2 target enemies, draw a card"; }, new CardActions((world, card) => {
-    world.card_targeting = new CardTargeting(card.card, card.index, 2, true, false);
-    world.state = State.Targeting;
-}, (world, card) => {
-    for (let target of card.targets_e) {
-        world.enemies.get(target).hp -= 3 + additional_damage;
-    }
-    world.draw_card();
-    world.cur_energy -= card.card.energy_cost;
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}));
-// 7
-const card_4 = new CardDef("Overwhelming Wave", 3, (ad, _) => { return "deal " + (2 + ad) + " damage to to all enemies"; }, new CardActions((world, card) => {
-    for (let enemy of world.enemies) {
-        enemy[1].hp -= 2 + additional_damage;
-    }
-    world.cur_energy -= card.card.energy_cost;
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}));
-// 8
-const card_5 = new CardDef("Fiery Inferno", 3, (ad, _) => { return "for the rest of the level, at the end of each turn, deal " + (2 + ad) + " damage to to all enemies, and take 2 damage"; }, new CardActions((world, card) => {
-    world.perm_cards.push(new CardPerm(card.card));
-    world.cur_energy -= card.card.energy_cost;
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}, (_w, _c) => { }, (world, _card) => {
-    for (let enemy of world.enemies) {
-        enemy[1].hp -= 2 + additional_damage;
-    }
-    world.hp -= 2;
-    return true;
-}), 7, CardImage.Fireball1, CardColor.Red);
-// 7
-const card_6 = new CardDef("Nature's Reclamation", 2, (_a, _t) => { return "remove a card on the battlefield, then, heal for 2."; }, new CardActions((world, card) => {
-    world.card_targeting = new CardTargeting(card.card, card.index, 1, false, true);
-    world.state = State.Targeting;
-}, (world, card) => {
-    world.perm_cards.splice(card.targets_c[0], 1);
-    world.hp = Math.min(world.hp + 2, world.maxhp);
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}));
-// 6
-const card_7 = new CardDef("FIREBALL", 0, (ad, _) => {
-    if (ad == 0) {
-        return "Deal X damage evenly spread (rounded down) among any number of target enemies, where X is the 1.5 times the amount of energy you have left (rounded down). For each target beyond the first, decrease X by 1, X cannot be negative. Consume all of your energy.";
-    }
-    else {
-        return "Deal X damage evenly spread (rounded down) + " + ad + " among any number of target enemies, where X is the 1.5 times the amount of energy you have left (rounded down). For each target beyond the first, decrease X by 1, X cannot be negative. Consume all of your energy.";
-    }
-}, new CardActions((world, card) => {
-    world.card_targeting = new CardTargeting(card.card, card.index, 9999999, true, false);
-    world.state = State.Targeting;
-}, (world, card) => {
-    let total_damage = Math.floor(world.cur_energy * 1.5);
-    total_damage = Math.max(total_damage - card.targets_e.length + 1, 0);
-    let to_each = Math.floor(total_damage / card.targets_e.length);
-    for (let target of card.targets_e) {
-        world.enemies.get(target).hp -= to_each + additional_damage;
-    }
-    world.cur_energy = 0;
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}), 5, CardImage.Fireball1, CardColor.Red);
-// 8
-const card_8 = new CardDef("Healing Blessing", 2, (_a, _t) => { return "Heal for 3, then, draw a card."; }, new CardActions((world, card) => {
-    world.cur_energy -= card.card.energy_cost;
-    world.hp = Math.min(world.hp + 3, world.maxhp);
-    world.draw_card();
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}, (_world, _card) => {
-}));
-// 8
-//
-const card_9 = new CardDef("Shattering Rock", 3, (ad, _) => { return "Deal " + (3 + ad) + " damage to target enemy, then if it killed the enemy, add 3 Rock Splinters to your hand which deal " + (1 + ad) + " damage to target enemy for 0 energy"; }, new CardActions((world, card) => {
-    world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
-    world.state = State.Targeting;
-}, (world, card) => {
-    for (let target of card.targets_e) {
-        world.enemies.get(target).hp -= 3 + additional_damage;
-        if (world.enemies.get(target).hp <= 0) {
-            world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { for (let target of card.targets_e) {
-                world.enemies.get(target).hp -= 1 + additional_damage;
-            } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, CardImage.Rock, CardColor.Green, false));
-            world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { for (let target of card.targets_e) {
-                world.enemies.get(target).hp -= 1 + additional_damage;
-            } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, CardImage.Rock, CardColor.Green, false));
-            world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { for (let target of card.targets_e) {
-                world.enemies.get(target).hp -= 1 + additional_damage;
-            } world.cur_energy -= card.card.energy_cost; world.state = State.Playing; }), null, CardImage.Rock, CardColor.Green, false));
-        }
-    }
-    console.log(world.player_hand);
-    world.cur_energy -= card.card.energy_cost;
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}), 7, CardImage.Rock, CardColor.Green);
-// 9
-const card_10 = new CardDef("Supernova", 7, (_) => { return "Discard your hand, shuffle your discard pile into your deck, then, for the rest of the level decrease the cost of energy cost cards in your deck by 2, energy cost cannot be negative."; }, new CardActions((world, card) => {
-    world.discard = [...world.discard, ...world.player_hand];
-    world.cur_deck = [...world.discard];
-    world.discard = [];
-    world.player_hand = [];
-    world.cur_energy -= card.card.energy_cost;
-    world.shuffle();
-    for (let c of world.cur_deck) {
-        c.energy_cost = Math.max(c.energy_cost - 2, 0);
-        c.p_energy_cost = Math.max(c.p_energy_cost - 2, 0);
-    }
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}, (_world, _card) => { }), 6, CardImage.Fireball1, CardColor.Red);
-// 5
-const card_11 = new CardDef("Blood Pact", 2, (_a, _t) => { return "Lose 2 life, then draw 2 cards"; }, new CardActions((world, card) => {
-    world.draw_card();
-    world.draw_card();
-    world.hp -= 2;
-    world.cur_energy -= card.card.energy_cost;
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}, (_world, _card) => { }));
 let additional_damage = 0;
-// 8
-const card_12 = new CardDef("Arcane Power", 5, (_a, _t) => { return "For the rest of the level, each card that deals damage to enemies deals 1 more damage"; }, new CardActions((world, card) => {
-    additional_damage += 1;
-    world.cur_energy -= card.card.energy_cost;
-    world.state = State.Playing;
-    world.discard.push(card.card);
-}, (_world, _card) => { }));
-const card_13 = new CardDef("Leyline", 5, (_a, _t) => { return "For the rest of the level, at the end of your turn, draw a card"; }, new CardActions((world, card) => {
-    world.perm_cards.push(new CardPerm(card.card));
-    world.cur_energy -= card.card.energy_cost;
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}, (_w, _c) => { }, (world, _card) => {
-    world.draw_card();
-    return true;
-}));
-// 7
-const card_14 = new CardDef("Relentless Crusade", 2, (ad, t) => { return "Deal " + (2 + ad + t * 2) + " damage to up to 2 target enemies, then for the rest of the level increase this card's damage by 2, and its mana cost by 2, then, this card goes back on the top of your deck"; }, new CardActions((world, card) => {
-    world.card_targeting = new CardTargeting(card.card, card.index, 2, true, false);
-    world.state = State.Targeting;
-}, (world, card) => {
-    for (let target of card.targets_e) {
-        world.enemies.get(target).hp -= 2 + additional_damage + card.card.tracker * 2;
-    }
-    card.card.tracker++;
-    world.cur_energy -= card.card.energy_cost;
-    card.card.energy_cost += 2;
-    card.card.p_energy_cost += 2;
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.cur_deck.unshift(card.card);
-}), 6.1, CardImage.Crusade, CardColor.White);
-// 6
-const card_15 = new CardDef("Force Push", 2, (_a, _t) => { return "Move all enemies one space back"; }, new CardActions((world, card) => {
-    for (let target of world.enemies) {
-        target[1].y = Math.max(target[1].y - 80, 100);
-    }
-    world.cur_energy -= card.card.energy_cost;
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}, (_world, _card) => {
-}), null, CardImage.Crusade, CardColor.White);
-const card_16 = new CardDef("Renewal", 2, (_a, _t) => { return "A random card from your discard pile is put in your hand, its energy cost becomes 0 until you play it."; }, new CardActions((world, card) => {
-    if (world.discard.length > 0) {
-        let random = Math.max(Math.floor(Math.random() * world.discard.length - 0.001), 0);
-        world.player_hand.push(world.discard[random]);
-        world.discard.splice(random, 1);
-        world.player_hand[world.player_hand.length - 1].energy_cost = 0;
-    }
-    world.cur_energy -= card.card.energy_cost;
-    world.state = State.Playing;
-    world.discard.push(card.card);
-}, (_world, _card) => {
-}), 8.2, CardImage.Lightning, CardColor.Blue);
-const card_17 = new CardDef("Poison", 2, (ad, _) => { return "Poison target enemy, until it dies, it takes " + (2 + ad) + " damage at the end of each turn"; }, new CardActions((world, card) => {
-    world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
-    world.state = State.Targeting;
-}, (world, card) => {
-    for (let target of card.targets_e) {
-        world.enemies.get(target).poison += 2 + additional_damage;
-    }
-    world.cur_energy -= card.card.energy_cost;
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}), 8.4, null, null);
-const card_18 = new CardDef("Toxic Deluge", 4, (ad, _) => { return "Badly poison target enemy, until it dies, it takes " + (2 + ad) + " damage at the end of each turn, at the end of each turn, increase that damage by 1"; }, new CardActions((world, card) => {
-    world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
-    world.state = State.Targeting;
-}, (world, card) => {
-    for (let target of card.targets_e) {
-        world.enemies.get(target).poison += 2 + additional_damage;
-        world.enemies.get(target).toxic += 1;
-    }
-    world.cur_energy -= card.card.energy_cost;
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}), 7.3, null, null);
-const card_19 = new CardDef("Wind Burst", 3, (ad, _) => { return "Push target enemy back 3 spaces"; }, new CardActions((world, card) => {
-    world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
-    world.state = State.Targeting;
-}, (world, card) => {
-    for (let target of card.targets_e) {
-        world.enemies.get(target).y = Math.max(world.enemies.get(target).y - 80 * 3, 100);
-    }
-    world.cur_energy -= card.card.energy_cost;
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}), null, CardImage.Crusade, CardColor.White);
-const card_20 = new CardDef("Corrosion", 3, (ad, _) => { return "double target enemies poison count"; }, new CardActions((world, card) => {
-    world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
-    world.state = State.Targeting;
-}, (world, card) => {
-    for (let target of card.targets_e) {
-        world.enemies.get(target).poison *= 2;
-    }
-    world.cur_energy -= card.card.energy_cost;
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}), null, null, null);
-const card_21 = new CardDef("Poison Bomb", 3, (ad, _) => { return "Poison all enemies for " + (1 + ad) + ". Until they die, they take " + (1 + ad) + " damage at the end of each turn"; }, new CardActions((world, card) => {
-    for (let target of world.enemies) {
-        target[1].poison += (1 + additional_damage);
-    }
-    world.cur_energy -= card.card.energy_cost;
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}, (world, card) => {
-}), 7.6, null, null);
-const card_22 = new CardDef("Toxic Bomb", 6, (ad, _) => { return "Badly poison all enemies for " + (1 + ad) + ". Until they die, they take " + (1 + ad) + " damage at the end of each turn, at the end of each turn, increase that damage by 1"; }, new CardActions((world, card) => {
-    for (let target of world.enemies) {
-        target[1].poison += (1 + additional_damage);
-        target[1].toxic += 1;
-    }
-    world.cur_energy -= card.card.energy_cost;
-    world.state = State.Playing;
-    card.card.energy_cost = card.card.p_energy_cost;
-    world.discard.push(card.card);
-}, (world, card) => {
-}), 7.2, null, null);
+const cards = [[new CardDef("Quickshot", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => {
+            world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
+            world.state = State.Targeting;
+        }, (world, card) => {
+            world.pay_cost(card.card);
+            world.damage_enemy(world.enemies.get(card.targets_e[0]), 1 + additional_damage);
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        })), 10], [new CardDef("Lightning Bolt", 2, (ad, _) => { return "deal " + (2 + ad) + " damage to up to 3 target enemies"; }, new CardActions((world, card) => {
+            world.card_targeting = new CardTargeting(card.card, card.index, 3, true, false);
+            world.state = State.Targeting;
+        }, (world, card) => {
+            world.pay_cost(card.card);
+            for (let target of card.targets_e) {
+                world.damage_enemy(world.enemies.get(target), 2 + additional_damage);
+            }
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.state = State.Playing;
+            world.discard.push(card.card);
+        })), 8], [new CardDef("Smite", 3, (ad, _) => { return "deal " + (3 + ad) + " damage to up to 2 target enemies, draw a card"; }, new CardActions((world, card) => {
+            world.card_targeting = new CardTargeting(card.card, card.index, 2, true, false);
+            world.state = State.Targeting;
+        }, (world, card) => {
+            world.pay_cost(card.card);
+            for (let target of card.targets_e) {
+                world.damage_enemy(world.enemies.get(target), 3 + additional_damage);
+            }
+            world.draw_card();
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        })), 7], [new CardDef("Overwhelming Wave", 3, (ad, _) => { return "deal " + (2 + ad) + " damage to to all enemies"; }, new CardActions((world, card) => {
+            world.pay_cost(card.card);
+            for (let enemy of world.enemies) {
+                world.damage_enemy(enemy[1], 2 + additional_damage);
+            }
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        })), 8], [new CardDef("Fiery Inferno", 3, (ad, _) => { return "for the rest of the level, at the end of each turn, deal " + (2 + ad) + " damage to to all enemies, and take 2 damage"; }, new CardActions((world, card) => {
+            world.pay_cost(card.card);
+            world.perm_cards.push(new CardPerm(card.card));
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        }, (_w, _c) => { }, (world, _card) => {
+            for (let enemy of world.enemies) {
+                world.damage_enemy(enemy[1], 2 + additional_damage);
+            }
+            world.hp -= 2;
+            return true;
+        }), 7, CardImage.Fireball1, CardColor.Red), 7], [new CardDef("Nature's Reclamation", 2, (_a, _t) => { return "remove a card on the battlefield, then, heal for 2."; }, new CardActions((world, card) => {
+            world.card_targeting = new CardTargeting(card.card, card.index, 1, false, true);
+            world.state = State.Targeting;
+        }, (world, card) => {
+            world.pay_cost(card.card);
+            world.perm_cards.splice(card.targets_c[0], 1);
+            if (world.perm_cards[card.targets_c[0]].card.name == "Berserk") {
+                berserks_active -= 1;
+            }
+            world.hp = Math.min(world.hp + 2, world.maxhp);
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        })), 6], [new CardDef("FIREBALL", 0, (ad, _) => {
+            if (ad == 0) {
+                return "Choose any number of target enemies. Deal 1.5 times the amount of energy you have left as damage evenly spread amoung the target enemies.";
+            }
+            else {
+                return "Choose any number of target enemies. Deal 1.5 times the amount of energy you have left as damage evenly spread amoung the target enemies. This deals " + (ad) + " additional damage to each target";
+            }
+        }, new CardActions((world, card) => {
+            world.card_targeting = new CardTargeting(card.card, card.index, 9999999, true, false);
+            world.state = State.Targeting;
+        }, (world, card) => {
+            let total_damage = Math.floor(world.cur_energy * 1.5);
+            total_damage = Math.max(total_damage - card.targets_e.length + 1, 0);
+            let to_each = Math.floor(total_damage / card.targets_e.length);
+            for (let target of card.targets_e) {
+                world.damage_enemy(world.enemies.get(target), to_each + additional_damage);
+            }
+            world.cur_energy = 0;
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        }), 6.5, CardImage.Fireball1, CardColor.Red), 8], [new CardDef("Healing Blessing", 2, (_a, _t) => { return "Heal for 3, then, draw a card."; }, new CardActions((world, card) => {
+            world.pay_cost(card.card);
+            world.hp = Math.min(world.hp + 3, world.maxhp);
+            world.draw_card();
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        }, (_world, _card) => {
+        })), 8], [new CardDef("Shattering Rock", 3, (ad, _) => { return "Deal " + (3 + ad) + " damage to target enemy, then if it killed the enemy, add 3 Rock Splinters to your hand which deal " + (1 + ad) + " damage to target enemy for 0 energy"; }, new CardActions((world, card) => {
+            world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
+            world.state = State.Targeting;
+        }, (world, card) => {
+            world.pay_cost(card.card);
+            for (let target of card.targets_e) {
+                world.damage_enemy(world.enemies.get(target), 3 + additional_damage);
+                if (world.enemies.get(target).hp <= 0) {
+                    world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { world.pay_cost(card.card); for (let target of card.targets_e) {
+                        world.damage_enemy(world.enemies.get(target), 1 + additional_damage);
+                    } world.state = State.Playing; }), null, CardImage.Rock, CardColor.Green, false));
+                    world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { world.pay_cost(card.card); for (let target of card.targets_e) {
+                        world.damage_enemy(world.enemies.get(target), 1 + additional_damage);
+                    } world.state = State.Playing; }), null, CardImage.Rock, CardColor.Green, false));
+                    world.player_hand.push(new Card("Rock Splinter", 0, (ad, _) => { return "deal " + (1 + ad) + " damage to target enemy"; }, new CardActions((world, card) => { world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false); world.state = State.Targeting; }, (world, card) => { world.pay_cost(card.card); for (let target of card.targets_e) {
+                        world.damage_enemy(world.enemies.get(target), 1 + additional_damage);
+                    } world.state = State.Playing; }), null, CardImage.Rock, CardColor.Green, false));
+                }
+            }
+            console.log(world.player_hand);
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        }), 7, CardImage.Rock, CardColor.Green), 9], [new CardDef("Supernova", 7, (_) => { return "Discard your hand, shuffle your discard pile into your deck, then, for the rest of the level decrease the cost of energy cost cards in your deck by 2, energy cost cannot be negative."; }, new CardActions((world, card) => {
+            world.pay_cost(card.card);
+            world.discard = [...world.discard, ...world.player_hand];
+            world.cur_deck = [...world.discard];
+            world.discard = [];
+            world.player_hand = [];
+            world.shuffle();
+            for (let c of world.cur_deck) {
+                c.energy_cost = Math.max(c.energy_cost - 2, 0);
+                c.p_energy_cost = Math.max(c.p_energy_cost - 2, 0);
+            }
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        }, (_world, _card) => { }), 6, CardImage.Fireball1, CardColor.Red), 5], [new CardDef("Blood Pact", 2, (_a, _t) => { return "Lose 2 life, then draw 2 cards"; }, new CardActions((world, card) => {
+            world.pay_cost(card.card);
+            world.draw_card();
+            world.draw_card();
+            world.hp -= 2;
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        }, (_world, _card) => { })), 8], [new CardDef("Arcane Power", 5, (_a, _t) => { return "For the rest of the level, each card that deals damage to enemies deals 1 more damage"; }, new CardActions((world, card) => {
+            world.pay_cost(card.card);
+            additional_damage += 1;
+            world.state = State.Playing;
+            world.discard.push(card.card);
+        }, (_world, _card) => { })), 7], [new CardDef("Leyline", 5, (_a, _t) => { return "For the rest of the level, at the end of your turn, draw a card"; }, new CardActions((world, card) => {
+            world.pay_cost(card.card);
+            world.perm_cards.push(new CardPerm(card.card));
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        }, (_w, _c) => { }, (world, _card) => {
+            world.draw_card();
+            return true;
+        })), 6], [new CardDef("Relentless Crusade", 2, (ad, t) => { return "Deal " + (2 + ad + t * 2) + " damage to up to 2 target enemies, then for the rest of the level increase this card's damage by 2, and its mana cost by 2, then, this card goes back on the top of your deck"; }, new CardActions((world, card) => {
+            world.card_targeting = new CardTargeting(card.card, card.index, 2, true, false);
+            world.state = State.Targeting;
+        }, (world, card) => {
+            world.pay_cost(card.card);
+            for (let target of card.targets_e) {
+                world.damage_enemy(world.enemies.get(target), 2 + additional_damage + card.card.tracker * 2);
+            }
+            card.card.tracker++;
+            card.card.energy_cost += 2;
+            card.card.p_energy_cost += 2;
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.cur_deck.unshift(card.card);
+        }), 6.1, CardImage.Crusade, CardColor.White), 6], [new CardDef("Force Push", 2, (_a, _t) => { return "Move all enemies one space back"; }, new CardActions((world, card) => {
+            for (let target of world.enemies) {
+                target[1].y = Math.max(target[1].y - 80, 100);
+            }
+            world.pay_cost(card.card);
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        }, (_world, _card) => {
+        }), null, CardImage.Crusade, CardColor.White), 7], [new CardDef("Renewal", 2, (_a, _t) => { return "A random card from your discard pile is put in your hand, its energy cost becomes 0 until you play it."; }, new CardActions((world, card) => {
+            world.pay_cost(card.card);
+            if (world.discard.length > 0) {
+                let random = Math.max(Math.floor(Math.random() * world.discard.length - 0.001), 0);
+                world.player_hand.push(world.discard[random]);
+                world.discard.splice(random, 1);
+                world.player_hand[world.player_hand.length - 1].energy_cost = 0;
+            }
+            world.state = State.Playing;
+            world.discard.push(card.card);
+        }, (_world, _card) => {
+        }), 8.2, CardImage.Lightning, CardColor.Blue), 6], [new CardDef("Poison", 2, (ad, _) => { return "Poison target enemy, until it dies, it takes " + (2 + ad) + " damage at the end of each turn"; }, new CardActions((world, card) => {
+            world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
+            world.state = State.Targeting;
+        }, (world, card) => {
+            world.pay_cost(card.card);
+            for (let target of card.targets_e) {
+                world.enemies.get(target).poison += 2 + additional_damage;
+            }
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        }), 8.4, null, null), 7], [new CardDef("Toxic Deluge", 4, (ad, _) => { return "Badly poison target enemy, until it dies, it takes " + (2 + ad) + " damage at the end of each turn, at the end of each turn, increase that damage by 1"; }, new CardActions((world, card) => {
+            world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
+            world.state = State.Targeting;
+        }, (world, card) => {
+            world.pay_cost(card.card);
+            for (let target of card.targets_e) {
+                world.enemies.get(target).poison += 2 + additional_damage;
+                world.enemies.get(target).toxic += 1;
+            }
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        }), 7.3, null, null), 5], [new CardDef("Wind Burst", 3, (ad, _) => { return "Push target enemy back 3 spaces"; }, new CardActions((world, card) => {
+            world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
+            world.state = State.Targeting;
+        }, (world, card) => {
+            world.pay_cost(card.card);
+            for (let target of card.targets_e) {
+                world.enemies.get(target).y = Math.max(world.enemies.get(target).y - 80 * 3, 100);
+            }
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        }), null, CardImage.Crusade, CardColor.White), 6], [new CardDef("Corrosion", 3, (ad, _) => { return "double target enemies poison count"; }, new CardActions((world, card) => {
+            world.card_targeting = new CardTargeting(card.card, card.index, 1, true, false);
+            world.state = State.Targeting;
+        }, (world, card) => {
+            world.pay_cost(card.card);
+            for (let target of card.targets_e) {
+                world.enemies.get(target).poison *= 2;
+            }
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        }), null, null, null), 6], [new CardDef("Poison Bomb", 3, (ad, _) => { return "Poison all enemies for " + (1 + ad) + ". Until they die, they take " + (1 + ad) + " damage at the end of each turn"; }, new CardActions((world, card) => {
+            world.pay_cost(card.card);
+            for (let target of world.enemies) {
+                target[1].poison += (1 + additional_damage);
+            }
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        }, (world, card) => {
+        }), 7.6, null, null), 5], [new CardDef("Toxic Bomb", 6, (ad, _) => { return "Badly poison all enemies for " + (1 + ad) + ". Until they die, they take " + (1 + ad) + " damage at the end of each turn, at the end of each turn, increase that damage by 1"; }, new CardActions((world, card) => {
+            world.pay_cost(card.card);
+            for (let target of world.enemies) {
+                target[1].poison += (1 + additional_damage);
+                target[1].toxic += 1;
+            }
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        }, (world, card) => {
+        }), 7.2, null, null), 5], [
+        new CardDef("Berserk", 7, (_a, _) => { return "For the next 2 turns, cards cost life instead of energy, and, whenever you deal damage to an enemy, heal for that much."; }, new CardActions((world, card) => {
+            world.pay_cost(card.card);
+            world.perm_cards.push(new CardPerm(card.card));
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+            berserks_active++;
+        }, (_w, _c) => { }, (world, card) => {
+            card.turns++;
+            if (card.turns == 2) {
+                berserks_active--;
+                return false;
+            }
+            return true;
+        }), 7.6), 6
+    ], [
+        new CardDef("Fortify", 2, (_a, _) => { return "Increase your maximum hp by 5, then, heal for 5."; }, new CardActions((world, card) => {
+            world.pay_cost(card.card);
+            world.maxhp += 5;
+            world.hp += 5;
+            world.state = State.Playing;
+            card.card.energy_cost = card.card.p_energy_cost;
+            world.discard.push(card.card);
+        }, (_w, _c) => { }), null, CardImage.Crusade, CardColor.White), 6
+    ]
+];
+let berserks_active = 0;
 let cur_id = 1;
 let tutorial_complete = false;
 let cardimgbl;
@@ -1802,7 +1763,7 @@ const sketch = (p5) => {
     p5.mouseReleased = function () {
         if (world.state == State.CardOnMouse) {
             if (p5.mouseX > 0 && p5.mouseX < WIDTH && p5.mouseY > 0 && p5.mouseY < CARD_Y - 50) {
-                if (world.cur_energy >= world.card_on_mouse.card.energy_cost) {
+                if (world.cur_energy >= world.card_on_mouse.card.energy_cost || berserks_active > 0) {
                     world.card_on_mouse.card.actions.onCast(world, world.card_on_mouse);
                     world.card_on_mouse = null;
                 }
