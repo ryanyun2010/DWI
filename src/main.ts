@@ -110,6 +110,8 @@ class CardDef {
 }
 
 
+
+
 class Card {
 	name: string;
 	energy_cost: number;
