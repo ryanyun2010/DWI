@@ -529,7 +529,6 @@ class World {
             world.make_card(card_1)
         ];
         this.discard = [];
-        this.shuffle();
         this.hp = this.maxhp;
         LEVELS = [
             [
