@@ -556,6 +556,7 @@ class World {
 		this.turn = -1;
 		this.perm_cards = [];
 		this.player_hand = [];
+		this.maxhp = 20;
 		this.shuffle();
 		this.hp = this.maxhp;
 	}
@@ -572,6 +573,7 @@ class World {
 		this.cur_deck = [...this.player_deck];
 		this.discard = [];
 		this.shuffle();
+		this.maxhp = 20;
 		this.hp = this.maxhp;
 		LEVELS = START_LEVELS;
 	}
@@ -584,6 +586,7 @@ class World {
 		this.max_energy = 0;
 		this.turn = -1;
 		this.perm_cards = [];
+		this.maxhp = 20;
 		this.player_hand = [
 		];
 		this.cur_deck = [
