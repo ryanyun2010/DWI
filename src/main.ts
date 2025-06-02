@@ -641,7 +641,7 @@ class World {
 		}
 	}
 	shuffle() {
-		shuffle(this.player_deck);
+		shuffle(this.cur_deck);
 	}
 	update(){
 		if (this.state == State.Start) return;
