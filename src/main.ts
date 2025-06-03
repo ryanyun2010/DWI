@@ -1815,7 +1815,7 @@ const cards = [[new CardDef("Quickshot", 0, (ad: number, _) => {return "deal " +
 			}
 			return true;
 		}
-	),7.6),60],[
+	),7.6),6],[
 	new CardDef("Fortify", 2, (_a,_) => {return "Increase your maximum hp by 5, then, heal for 5."}, new CardActions(
 		(world: World, card: CardOnMouse) => {
 			world.maxhp += 5;
