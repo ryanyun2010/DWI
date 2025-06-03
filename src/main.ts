@@ -1696,7 +1696,9 @@ const cards = [[new CardDef("Quickshot", 0, (ad: number, _) => {return "deal " +
 		card.card.p_energy_cost += 2;
 		world.state = State.Playing;
 		card.card.energy_cost = card.card.p_energy_cost;
-		world.cur_deck.unshift(card.card);
+		if (card.real_card) {
+			world.cur_deck.unshift(card.card);
+		}
 	}
 ), 6.1, CardImage.Crusade, CardColor.White),6], [new CardDef("Force Push", 2, (_a,_t) => {return "Move all enemies one space back"}, new CardActions(
 	(world: World, card: CardOnMouse) => {
